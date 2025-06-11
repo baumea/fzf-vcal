@@ -1,4 +1,7 @@
 A [fzf](https://github.com/junegunn/fzf)-based **calendar** application with CalDav support.
+If you are interested in this, then you may also be interested in the
+corresponding journaling application
+[fzf-vjour](https://github.com/baumea/fzf-vjour).
 
 Description and Use Case
 ------------------------
