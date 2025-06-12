@@ -144,15 +144,14 @@ __load_approx_data() {
 __load_weeks() {
   dates=$(awk -F'|' '{ print $2; print $3 }' "$APPROX_DATA_FILE")
   file_dates=$(mktemp)
-  echo "$dates" | date --file="/dev/stdin" +"%s" >"$file_dates"
+  echo "$dates" | date --file="/dev/stdin" +"%G|%V" >"$file_dates"
   awk "$AWK_MERGE" "$file_dates" "$APPROX_DATA_FILE"
   rm "$file_dates"
 }
 
 __show_day() {
-  weeknr=$(date -d "$DISPLAY_DATE" +"%s")
-  weeknr=$(((weeknr - 259200) / 604800)) # shift, because epoch origin is a Thursday
-  files=$(grep "^$weeknr " "$WEEKLY_DATA_FILE" | cut -d " " -f 2-)
+  weeknr=$(date -d "$DISPLAY_DATE" +"%G.%V")
+  files=$(grep "^$weeknr\ " "$WEEKLY_DATA_FILE" | cut -d " " -f 2-)
   # Find relevant files in list of week files
   sef=$({
     set -- $files
@@ -199,9 +198,8 @@ __show_day() {
 }
 
 __list() {
-  weeknr=$(date -d "$DISPLAY_DATE" +"%s")
-  weeknr=$(((weeknr - 259200) / 604800)) # shift, because epoch origin is a Thursday
-  files=$(grep "^$weeknr " "$WEEKLY_DATA_FILE" | cut -d " " -f 2-)
+  weeknr=$(date -d "$DISPLAY_DATE" +"%G.%V")
+  files=$(grep "^$weeknr\ " "$WEEKLY_DATA_FILE" | cut -d " " -f 2-)
   dayofweek=$(date -d "$DISPLAY_DATE" +"%u")
   delta=$((1 - dayofweek))
   startofweek=$(date -d "$DISPLAY_DATE -$delta days" +"%D")
@@ -388,6 +386,7 @@ if [ "${1:-}" = "--new" ]; then
     if awk -v uid="$uuid" "$AWK_NEW" "$filetmp" >"$filenew"; then
       mv "$filenew" "$fpath"
       __refresh_data
+      start=$(awk -v field="DTSTART" "$AWK_GET" "$fpath" | grep -o '[0-9]\{8\}')
     else
       rm -f "$filenew"
       err "Failed to create new entry. Press <enter> to continue."
@@ -395,6 +394,7 @@ if [ "${1:-}" = "--new" ]; then
     fi
   fi
   rm "$filetmp"
+  set -- "--day" "$start"
 fi
 
 if [ -z "${APPROX_DATA_FILE:-}" ]; then
@@ -473,8 +473,8 @@ if [ "${1:-}" = "--preview" ]; then
 fi
 
 month_previous() {
-  month="$1"
-  year="$2"
+  month=$(echo "$1" | sed 's/^0//')
+  year=$(echo "$2" | sed 's/^0//')
   if [ "$month" -eq 1 ]; then
     month=12
     year=$((year - 1))
@@ -485,8 +485,8 @@ month_previous() {
 }
 
 month_next() {
-  month="$1"
-  year="$2"
+  month=$(echo "$1" | sed 's/^0//')
+  year=$(echo "$2" | sed 's/^0//')
   if [ "$month" -eq 12 ]; then
     month=1
     year=$((year + 1))

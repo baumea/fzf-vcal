@@ -1,17 +1,27 @@
-BEGIN { FS="|"; i=0; dlt = -259200; spw = 604800; }
+BEGIN { FS="|" }
 NR == FNR {
   i = i + 1;
-  from[i] = int(($1 + dlt)/ spw);
+  from_year[i] = $1
+  from_week[i] = $2
   getline;
-  to[i] = int(($1 + dlt) / spw);
+  to_year[i] = $1
+  to_week[i] = $2
   next
 } # Load start and end week numbers from first file
 
 { 
-  if (from[FNR] > to[FNR])
-    print "FNR", FNR, ":", from[FNR],"-",to[FNR], "    ",$0;
-  for(i=from[FNR]; i<=to[FNR]; i++) {
-    week[i] = week[i] " " $5
+  year_i = from_year[FNR]
+  week_i = from_week[FNR]
+  year_end = to_year[FNR]
+  week_end = to_week[FNR]
+  while(year_i <= year_end && (year_i < year_end || week_i <= week_end)) {
+    label = year_i"|"week_i
+    week[label] = week[label] " " $5
+    week_i++
+    if (week_i > 53) {
+      week_ = 1
+      year_i++
+    }
   }
 }
-END { for (i in week) print i week[i]; }
+END { for (label in week) print label week[label]; }
