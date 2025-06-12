@@ -27,10 +27,16 @@ BEGIN {
 desc { desc = desc "\\n" $0; next; }
 {
   from = substr($0, 1, 6) == "::: |>" ? substr($0, 8) : "";
+  if (!from)
+    exit 1
   getline
   to = substr($0, 1, 6) == "::: <|" ? substr($0, 8) : "";
+  if (!to)
+    exit 1
   getline
   summary = substr($0, 1, 2) == "# " ? substr($0, 3) : ""
+  if (!summary)
+    exit 1
   getline # This line should be empty
   getline # First line of description
   desc = $0;
@@ -41,7 +47,7 @@ END {
   # If nanoseconds are not 0, then we assume user enterd "tomorrow" or
   # something the like, and we make this a date entry, as opposed to a
   # date-time entry.
-  from = from ? from : "now"
+  gsub("\"", "\\\"", from)
   cmd = "date -d \"" from "\" +\"%N\"";
   cmd | getline t
   close(cmd)
@@ -53,10 +59,13 @@ END {
     from_type = "DATE"
     cmd = "date -d \"" from "\" +\"%Y%m%d\"";
   }
-  cmd | getline from
+  suc = cmd | getline from
   close(cmd)
+  if (suc != 1) {
+    exit 1
+  }
   #
-  to = to ? to : "now"
+  gsub("\"", "\\\"", to)
   cmd = "date -d \"" to "\" +\"%N\"";
   cmd | getline t
   close(cmd)
@@ -68,8 +77,11 @@ END {
     to_type = "DATE"
     cmd = "date -d \"" to "\" +\"%Y%m%d\"";
   }
-  cmd | getline to
+  suc = cmd | getline to
   close(cmd)
+  if (suc != 1) {
+    exit 1
+  }
   escape(summary);
   escape(desc);
 

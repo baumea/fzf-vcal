@@ -298,19 +298,24 @@ __edit() {
   # Update only if changes are detected
   if [ "$checksum" != "$(cksum "$filetmp")" ]; then
     filenew="$filetmp.ics"
-    awk "$AWK_UPDATE" "$filetmp" "$fpath" >"$filenew"
-    mv "$filenew" "$fpath"
-    __refresh_data
+    if awk "$AWK_UPDATE" "$filetmp" "$fpath" >"$filenew"; then
+      mv "$filenew" "$fpath"
+      __refresh_data
+    else
+      rm -f "$filenew"
+      err "Failed to edit entry. Press <enter> to continue."
+      read -r tmp
+    fi
   fi
   rm "$filetmp"
 }
 
 __refresh_data() {
   if [ -n "${APPROX_DATA_FILE:-}" ]; then
-    rm "$APPROX_DATA_FILE"
+    rm -f "$APPROX_DATA_FILE"
   fi
   if [ -n "${WEEKLY_DATA_FILE:-}" ]; then
-    rm "$WEEKLY_DATA_FILE"
+    rm -f "$WEEKLY_DATA_FILE"
   fi
   APPROX_DATA_FILE=$(mktemp)
   __load_approx_data >"$APPROX_DATA_FILE"
@@ -380,9 +385,14 @@ if [ "${1:-}" = "--new" ]; then
   # Update only if changes are detected
   if [ "$checksum" != "$(cksum "$filetmp")" ]; then
     filenew="$filetmp.ics"
-    awk -v uid="$uuid" "$AWK_NEW" "$filetmp" >"$filenew"
-    mv "$filenew" "$fpath"
-    __refresh_data
+    if awk -v uid="$uuid" "$AWK_NEW" "$filetmp" >"$filenew"; then
+      mv "$filenew" "$fpath"
+      __refresh_data
+    else
+      rm -f "$filenew"
+      err "Failed to create new entry. Press <enter> to continue."
+      read -r tmp
+    fi
   fi
   rm "$filetmp"
 fi
