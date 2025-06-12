@@ -614,7 +614,7 @@ selection=$(
       --bind="ctrl-k:transform:([ {1} = \"+\" ] && [ \$FZF_POS -ge 7 ]) &&
       echo unbind\(load\)+reload:$0 --list {2} '-1 day'||
       echo up" \
-      --bind="change:reload($0 --all)+hide-preview" \
+      --bind="change:unbind(load)+reload($0 --all)+hide-preview" \
       --bind="backward-eof:rebind(load)+reload($0 --list)+show-preview" \
       --bind="load:pos($DISPLAY_POS)" \
       --bind="ctrl-u:unbind(load)+reload:$0 --list {2} '-1 week'" \
