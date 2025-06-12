@@ -162,8 +162,8 @@ __show_day() {
         "$AWK_PARSE" "$file"
     done
   })
+  today=$(date -d "$DISPLAY_DATE" +"%D")
   if [ -n "$sef" ]; then
-    today=$(date -d "$DISPLAY_DATE" +"%D")
     sef=$(echo "$sef" | while IFS= read -r line; do
       set -- $line
       starttime="$1"
@@ -194,7 +194,7 @@ __show_day() {
       echo "$s|$e|$starttime|$endtime|$fpath|$description"
     done)
   fi
-  echo "$sef" | sort -n | awk -v daystart="$DAY_START" -v dayend="$DAY_END" "$AWK_DAYVIEW"
+  echo "$sef" | sort -n | awk -v today="$today" -v daystart="$DAY_START" -v dayend="$DAY_END" "$AWK_DAYVIEW"
 }
 
 __list() {
@@ -413,23 +413,27 @@ if [ "${1:-}" = "--day" ]; then
         --no-input \
         --margin='20%,5%' \
         --border='double' \
-        --border-label="🗓️ $(date -d "$DISPLAY_DATE" +"%A %e %B %Y")" \
         --color=label:bold:green \
         --border-label-pos=3 \
         --cycle \
         --delimiter='|' \
-        --with-nth='{5}' \
-        --accept-nth='1,2,3,4' \
+        --with-nth='{6}' \
+        --accept-nth='2,3,4,5' \
         --preview="$0 --preview {}" \
         --expect="ctrl-n,esc,backspace,q" \
+        --bind='load:transform(echo change-border-label:🗓️ $(date -d {1} +"%A %e %B %Y"))+transform(echo {} | grep \|\| || echo show-preview)' \
         --bind='start:hide-preview' \
+        --bind="ctrl-r:reload:$0 --show-day {1}" \
         --bind='ctrl-j:down+hide-preview+transform:echo {} | grep \|\| || echo show-preview' \
         --bind='ctrl-k:up+hide-preview+transform:echo {} | grep \|\| || echo show-preview' \
+        --bind="ctrl-l:hide-preview+reload:$0 --show-day {1} '+1 day'" \
+        --bind="ctrl-h:hide-preview+reload:$0 --show-day {1} '-1 day'" \
         --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
         --bind="ctrl-alt-d:become($0 --delete {})" \
         --bind="j:preview-down" \
         --bind="k:preview-down" \
         --bind="w:toggle-preview-wrap"
+    #--bind="ctrl-u:unbind(load)+reload:$0 --list {2} '-1 week'" \
   )
   key=$(echo "$selection" | head -1)
   line=$(echo "$selection" | tail -1)
@@ -456,10 +460,10 @@ if [ "${1:-}" = "--date" ]; then
 fi
 
 if [ "${1:-}" = "--preview" ]; then
-  hour=$(echo "$2" | cut -d '|' -f 1)
-  start=$(echo "$2" | cut -d '|' -f 2)
-  end=$(echo "$2" | cut -d '|' -f 3)
-  fpath=$(echo "$2" | cut -d '|' -f 4 | sed "s/ /|/g")
+  hour=$(echo "$2" | cut -d '|' -f 2)
+  start=$(echo "$2" | cut -d '|' -f 3)
+  end=$(echo "$2" | cut -d '|' -f 4)
+  fpath=$(echo "$2" | cut -d '|' -f 5 | sed "s/ /|/g")
   if [ -n "$hour" ] && [ -n "$fpath" ]; then
     fpath="$ROOT/$fpath"
     start=$(__canonical_datetime "$start" "%a ")
@@ -558,7 +562,7 @@ if [ "${1:-}" = "--preview-week" ]; then
 fi
 
 if [ "${1:-}" = "--delete" ]; then
-  fpath=$(echo "$2" | cut -d '|' -f 4 | sed "s/ /|/g")
+  fpath=$(echo "$2" | cut -d '|' -f 5 | sed "s/ /|/g")
   if [ -n "$fpath" ]; then
     fpath="$ROOT/$fpath"
     summary=$(awk -v field="SUMMARY" "$AWK_GET" "$fpath")
@@ -591,6 +595,14 @@ fi
 DISPLAY_DATE=${DISPLAY_DATE:-today}
 DISPLAY_DATE=$(date -d "$DISPLAY_DATE" +"%D")
 DISPLAY_POS=$((8 - $(date -d "$DISPLAY_DATE" +"%u")))
+
+if [ "${1:-}" = "--show-day" ]; then
+  shift
+  DISPLAY_DATE=${*:-today}
+  DISPLAY_POS=$((8 - $(date -d "$DISPLAY_DATE" +"%u")))
+  __show_day
+  exit
+fi
 
 if [ "${1:-}" = "--list" ]; then
   shift
@@ -633,7 +645,7 @@ selection=$(
       --bind="ctrl-alt-d:unbind(load)+reload:$0 --list {2} '+1 month'" \
       --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
       --bind="ctrl-g:become($0 --goto)" \
-      --bind="ctrl-l:rebind(load)+reload:$0 --list"
+      --bind="ctrl-r:rebind(load)+reload:$0 --list"
 )
 
 key=$(echo "$selection" | head -1)

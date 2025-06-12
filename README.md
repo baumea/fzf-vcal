@@ -84,10 +84,12 @@ Here is the list of available keybindings:
 | `ctrl-alt-u` | week view | Go back one month |
 | `ctrl-alt-d` | week view | Go forth one month |
 | `ctrl-s` | week view | Run the synchronization command |
-| `ctrl-l` | week view | Go to current week |
+| `ctrl-r` | week view | Go to current week |
 | `ctrl-g` | week view | Goto date |
 | `enter` | day view | Open selected  calendar entry in your favorite `$EDITOR` |
 | `ctrl-n` | day view | Make a new entry |
+| `ctrl-l` | day view | Move to next day |
+| `ctrl-h` | day view | Move to previous day |
 | `esc`, `backspace` or `q` | day view | Go back to week view |
 | `ctrl-s` | day view | Run the synchronization command |
 | `ctrl-alt-d` | day view | Delete selected entry |
