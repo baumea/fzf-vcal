@@ -17,6 +17,8 @@ if [ "${1:-}" = "--help" ]; then
   echo "  --day [date]           Show appointments of specified day (today)"
   echo "  --week [date]          Show week of specified date (today)"
   echo "  --import file          Import iCalendar file"
+  echo "  --git cmd              Run git command cmd relative to calendar root"
+  echo "  --git-init             Enable the use of git"
   echo ""
   echo "You may also start this program with setting locale and timezone"
   echo "information. For instance, to see and modify all of your calendar"
@@ -410,6 +412,7 @@ fi
 ###   FZF:     Fuzzy finder `fzf``
 ###   UUIDGEN: Tool `uuidgen` to generate random uids
 ###   CAT:     `bat` or `batcat` or `cat`
+###   GIT:     `git` if it exists
 ###
 ### The presence of POSIX tools is not checked.
 ###
@@ -435,6 +438,10 @@ elif command -v "batcat" >/dev/null; then
 fi
 CAT=${CAT:+$CAT --color=always --style=numbers --language=md}
 CAT=${CAT:-cat}
+
+if command -v "git" >/dev/null && [ -d "$ROOT/.git" ]; then
+  GIT="git -C $ROOT"
+fi
 
 ###
 ### AWK scripts
@@ -595,7 +602,6 @@ __datetime_human_machine() {
 ###   __edit
 ###   __new
 ###   __delete
-###   __import
 
 # __edit()
 # Edit iCalendar file.
@@ -634,6 +640,10 @@ __edit() {
     filenew="$filetmp.ics"
     if awk "$AWK_UPDATE" "$filetmp" "$fpath" >"$filenew"; then
       mv "$filenew" "$fpath"
+      if [ -n "${GIT:-}" ]; then
+        $GIT add "$fpath"
+        $GIT commit -m "Modified event" -- "$fpath"
+      fi
       __refresh_data
     else
       rm -f "$filenew"
@@ -696,6 +706,10 @@ __new() {
     filenew="$filetmp.ics"
     if awk -v uid="$uuid" "$AWK_NEW" "$filetmp" >"$filenew"; then
       mv "$filenew" "$fpath"
+      if [ -n "${GIT:-}" ]; then
+        $GIT add "$fpath"
+        $GIT commit -m "Added event" -- "$fpath"
+      fi
       start=$(awk -v field="DTSTART" "$AWK_GET" "$fpath" | grep -o '[0-9]\{8\}')
     else
       rm -f "$filenew"
@@ -722,6 +736,10 @@ __delete() {
     case $yn in
     "yes")
       rm -v "$fpath"
+      if [ -n "${GIT:-}" ]; then
+        $GIT add "$fpath"
+        $GIT commit -m "Deleted event" -- "$fpath"
+      fi
       break
       ;;
     "no")
@@ -734,10 +752,24 @@ __delete() {
   done
 }
 
+###
+### Extra command-line options
+###   --import
+###   --git
+###   --git-init
+###
+
 # --import
 # Import iCalendar file.
 #
 # @input $2: Absolute path to iCalendar file
+# @req $COLLECTION_LABELS: Mapping between collections and lables (see configuration)
+# @req $AWK_PARSE: Parse awk script
+# @req $AWK_GET: Awk script to extract fields from iCalendar file
+# @req $ROOT: Path that contains the collections (see configuration)
+# @req $UUIDGEN: `uuidgen` command
+# @req $FZF: `fzf` command
+# @req $CAT: Program to print
 # @return: On success, returns 0, otherwise 1
 if [ "${1:-}" = "--import" ]; then
   shift
@@ -790,6 +822,10 @@ if [ "${1:-}" = "--import" ]; then
         fpath="$ROOT/$collection/$uuid.ics"
       done
       cp -v "$file" "$fpath"
+      if [ -n "${GIT:-}" ]; then
+        $GIT add "$fpath"
+        $GIT commit -m "Imported event" -- "$fpath"
+      fi
       break
       ;;
     "no")
@@ -801,6 +837,41 @@ if [ "${1:-}" = "--import" ]; then
     esac
   done
   rm -f "$filetmp"
+  exit
+fi
+
+# --git
+# Run git command
+#
+# @input $2..: Git command
+# @req $GIT: git command with `-C` flag set
+# @return: On success, returns 0, otherwise 1
+if [ "${1:-}" = "--git" ]; then
+  if [ -z "${GIT:-}" ]; then
+    err "Git not supported, run \`$0 --git-init\` first"
+    return 1
+  fi
+  shift
+  $GIT "$@"
+  exit
+fi
+#
+# --git-init
+# Enable the ues of git
+#
+# @return: On success, returns 0, otherwise 1
+if [ "${1:-}" = "--git-init" ]; then
+  if [ -n "${GIT:-}" ]; then
+    err "Git already enabled"
+    return 1
+  fi
+  if ! command -v "git" >/dev/null; then
+    err "Git command not found"
+    return 1
+  fi
+  git -C "$ROOT" init
+  git -C "$ROOT" add -A
+  git -C "$ROOT" commit -m 'Initial commit: Start git tracking'
   exit
 fi
 
@@ -958,6 +1029,8 @@ while true; do
       set -- "--day" "$DISPLAY_DATE"
     elif [ "$key" = "ctrl-t" ]; then
       set -- "--set-tz" "--day" "$DISPLAY_DATE"
+    elif [ "$key" = "esc" ] || [ "$key" = "backspace" ] || [ "$key" = "q" ]; then
+      set -- "--week" "$DISPLAY_DATE"
     elif [ -z "$key" ] && [ -n "$fpath" ]; then
       __edit "$start" "$end" "$fpath"
       set -- "--day" "$DISPLAY_DATE"
@@ -995,6 +1068,8 @@ while true; do
           echo up" \
           --bind="change:unbind(load)+reload($0 --reload-all)+hide-preview" \
           --bind="load:pos($DISPLAY_POS)" \
+          --bind="ctrl-h:unbind(load)+reload:$0 --reload-week {2} '-1 week'" \
+          --bind="ctrl-l:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
           --bind="ctrl-u:unbind(load)+reload:$0 --reload-week {2} '-1 week'" \
           --bind="ctrl-d:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
           --bind="ctrl-alt-u:unbind(load)+reload:$0 --reload-week {2} '-1 month'" \

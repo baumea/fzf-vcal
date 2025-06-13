@@ -119,6 +119,10 @@ Also, you may set `LC_TIME` to your preferred language, and `TZ` to your
 preferred timezone. The latter is in particular helpful if you want to take a
 look at your calendar relative to being in another timezone.
 
+Git support
+-----------
+You can track your events with `git` by simply running `fzf-vcal --git-init`.
+
 License
 -------
 This project is licensed under the [MIT License](./LICENSE).
