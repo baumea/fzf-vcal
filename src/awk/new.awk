@@ -34,6 +34,8 @@ desc { desc = desc "\\n" $0; next; }
   if (!to)
     exit 1
   getline
+  location = substr($0, 1, 2) == "@ " ? substr($0, 3) : ""
+  if (location) getline
   summary = substr($0, 1, 2) == "# " ? substr($0, 3) : ""
   if (!summary)
     exit 1
@@ -83,6 +85,7 @@ END {
     exit 1
   }
   escape(summary);
+  escape(location);
   escape(desc);
 
   # print ical
@@ -102,6 +105,7 @@ END {
   print "DTEND;VALUE=" to_type ":" to
   if (summary)    print_fold("SUMMARY:",     summary,       i, s);
   if (desc)       print_fold("DESCRIPTION:", desc,          i, s);
+  if (location)   print_fold("LOCATION:",    location,      i, s);
   print "END:VEVENT"
   print "END:VCALENDAR"
 }

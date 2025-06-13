@@ -72,6 +72,7 @@ ENDFILE {
       exit 1
     }
     escape(summary);
+    escape(location);
     escape(desc);
   }
 }
@@ -86,6 +87,8 @@ NR == FNR {
   if (!to)
     exit 1
   getline
+  location = substr($0, 1, 2) == "@ " ? substr($0, 3) : ""
+  if (location) getline
   summary = substr($0, 1, 2) == "# " ? substr($0, 3) : ""
   if (!summary)
     exit 1
@@ -98,7 +101,7 @@ NR == FNR {
 /^BEGIN:VEVENT$/                                              { inside = 1; print; next }
 /^X-ALT-DESC/ && inside                                       { next } # drop this alternative description
 /^ / && inside                                                { next } # drop this folded line (the only content with folded lines will be updated)
-/^(DTSTART|DTEND|SUMMARY|CATEGORIES|DESCRIPTION|LAST-MODIFIED)/ && inside { next } # skip for now, we will write updated fields at the end
+/^(DTSTART|DTEND|SUMMARY|LOCATION|CATEGORIES|DESCRIPTION|LAST-MODIFIED)/ && inside { next } # skip for now, we will write updated fields at the end
 /^SEQUENCE/ && inside                                         { seq = $2; next } # store sequence number and skip
 /^END:VEVENT$/ {
   seq = seq ? seq + 1 : 1
@@ -108,6 +111,7 @@ NR == FNR {
   print "DTEND;VALUE=" to_type ":" to
   print_fold("SUMMARY:",     summary,       i, s)
   print_fold("DESCRIPTION:", desc,          i, s)
+  print_fold("LOCATION:",    location,      i, s)
   inside = ""
 }
 { print }
