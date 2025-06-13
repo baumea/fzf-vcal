@@ -10,6 +10,8 @@ if [ "${1:-}" = "--help" ]; then
   echo "You may specify at most one option."
   echo "  --help                 Show this help and exit"
   echo "  --today                Show today's appointments"
+  echo "  --yesterday            Show yesterday's appointments"
+  echo "  --tomorrow             Show tomorrow's appointments"
   echo "  --goto                 Interactively enter date to jump to"
   echo "  --new [date/date-time] Create new entry"
   echo "  --day [date]           Show appointments of specified day"
@@ -376,6 +378,10 @@ fi
 ###   SYNC_CMD (optional):  Synchronization command
 ###   DAY_START (optional): Hour of start of the day (defaults to 8)
 ###   DAY_END (optional):   Hour of end of the day (defaults to 18)
+###   EDITOR (optional):    Your favorite editor, is usually already exported
+###   TZ (optional):        Your favorite timezone, usually system's choice
+###   LC_TIME (optional):   Your favorite locale for date and time
+###   ZI_DIR (optional):    Location of tzdata, defaults to /usr/share/zoneinfo
 ###
 
 CONFIGFILE="$HOME/.config/fzf-vcal/config"
@@ -389,9 +395,14 @@ if [ -z "${ROOT:-}" ] || [ -z "${COLLECTION_LABELS:-}" ]; then
   err "Configuration is incomplete."
   exit 1
 fi
-SYNC_CMD=${SYNC_CMD:-exit}
+SYNC_CMD=${SYNC_CMD:-echo 'Synchronization disabled'}
 DAY_START=${DAY_START:-8}
 DAY_END=${DAY_END:-18}
+ZI_DIR=${ZI_DIR:-/usr/share/zoneinfo/posix}
+if [ ! -d "$ZI_DIR" ]; then
+  err "Could not determine time-zone information"
+  exit 1
+fi
 
 ###
 ### Check and load required tools
@@ -497,9 +508,9 @@ EOF
 ###
 #GREEN="\033[1;32m"
 #RED="\033[1;31m"
-#WHITE="\033[1;97m"
+WHITE="\033[1;97m"
 CYAN="\033[1;36m"
-#ITALIC="\033[3m"
+ITALIC="\033[3m"
 #FAINT="\033[2m"
 OFF="\033[m"
 
@@ -725,7 +736,7 @@ __refresh_data
 
 ### Exports
 # The preview calls run in subprocesses. These require the following variables:
-export ROOT CAT AWK_GET AWK_CAL CYAN OFF
+export ROOT CAT AWK_GET AWK_CAL CYAN WHITE ITALIC OFF
 # The reload commands also run in subprocesses, and use in addition
 export COLLECTION_LABELS DAY_START DAY_END AWK_DAYVIEW AWK_WEEKVIEW AWK_PARSE
 # as well as the following variables that will be dynamically specified. So, we
@@ -735,27 +746,47 @@ export COLLECTION_LABELS DAY_START DAY_END AWK_DAYVIEW AWK_WEEKVIEW AWK_PARSE
 # Re-export dynamical variables to subshells.
 __export() {
   export DISPLAY_DATE WEEKLY_DATA_FILE APPROX_DATA_FILE
+  if [ -n "${TZ:-}" ]; then
+    export TZ
+  fi
 }
 
 ###
 ### Main loop with the command-line argument
 ###   --today
+###   --yesterday
+###   --tomorrow
 ###   --goto
 ###   --new <optional date/date-time argument>
 ###   --day <optional date/date-time argument>
 ###   --week <optional date/date-time argument>
+###   --set-tz
 ###
 ### The command-line argument defaults to "--week today".
 
 while true; do
   export DISPLAY_DATE WEEKLY_DATA_FILE APPROX_DATA_FILE
-  if [ -z "${1:-}" ]; then
+
+  case "${1:-}" in
+  --today | --yesterday | --tomorrow | --goto | --new | --day | --week | --set-tz) ;;
+  *)
     DISPLAY_DATE="today"
     set -- "--week" "$DISPLAY_DATE"
-  fi
+    ;;
+  esac
 
   if [ "$1" = "--today" ]; then
     DISPLAY_DATE="today"
+    set -- "--day" "$DISPLAY_DATE"
+  fi
+
+  if [ "$1" = "--yesterday" ]; then
+    DISPLAY_DATE="yesterday"
+    set -- "--day" "$DISPLAY_DATE"
+  fi
+
+  if [ "$1" = "--tomorrow" ]; then
+    DISPLAY_DATE="tomorrow"
     set -- "--day" "$DISPLAY_DATE"
   fi
 
@@ -769,6 +800,16 @@ while true; do
       fi
     done
     set -- "--day" "$DISPLAY_DATE"
+  fi
+
+  if [ "$1" = "--set-tz" ]; then
+    new_tz=$(find "$ZI_DIR" -type f | sed "s|^$ZI_DIR/*||" | $FZF)
+    if [ -n "$new_tz" ]; then
+      TZ="$new_tz"
+      __refresh_data
+      __export
+    fi
+    shift
   fi
 
   if [ "${1:-}" = "--new" ]; then
@@ -797,13 +838,21 @@ while true; do
           --border='double' \
           --color=label:bold:green \
           --border-label-pos=3 \
+          --list-border="top" \
+          --list-label-pos=3 \
           --cycle \
           --delimiter='|' \
           --with-nth='{6}' \
           --accept-nth='1,2,3,4,5' \
           --preview="$0 --preview-event {}" \
-          --expect="ctrl-n,ctrl-alt-d,esc,backspace,q" \
-          --bind="load:pos(1)+transform(echo change-border-label:🗓️ \$(date -d {1} +\"%A %e %B %Y\"))+transform(echo {} | grep \|\| || echo show-preview)" \
+          --expect="ctrl-n,ctrl-alt-d,ctrl-t,esc,backspace,q" \
+          --bind="load:pos(1)+transform(
+              echo change-border-label:🗓️ \$(date -d {1} +\"%A %e %B %Y\")
+            )+transform(
+              [ -n \"\${TZ:-}\" ] && echo \"change-list-label:\$WHITE\$ITALIC(\$TZ)\$OFF\"
+            )+transform(
+              echo {} | grep \|\| || echo show-preview
+            )" \
           --bind="start:hide-preview" \
           --bind="ctrl-r:reload:$0 --reload-day {1}" \
           --bind="ctrl-j:down+hide-preview+transform:echo {} | grep \|\| || echo show-preview" \
@@ -834,6 +883,8 @@ while true; do
       __delete "$fpath"
       __refresh_data
       set -- "--day" "$DISPLAY_DATE"
+    elif [ "$key" = "ctrl-t" ]; then
+      set -- "--set-tz" "--day" "$DISPLAY_DATE"
     elif [ -z "$key" ] && [ -n "$fpath" ]; then
       __edit "$start" "$end" "$fpath"
       set -- "--day" "$DISPLAY_DATE"
@@ -859,10 +910,10 @@ while true; do
           --gap 1 \
           --no-scrollbar \
           --info=right \
-          --info-command="printf \"$(date +"%R %Z")\"" \
+          --info-command="printf \"$(date +"%R %Z")\"; [ -n \"\${TZ:-}\" ] && printf \" (\$TZ)\"" \
           --preview-window=up,7,border-bottom \
           --preview="$0 --preview-week {}" \
-          --expect="ctrl-n,ctrl-g" \
+          --expect="ctrl-n,ctrl-g,ctrl-t" \
           --bind="ctrl-j:transform:([ {1} = \"+\" ] && [ \$FZF_POS -le 1 ]) &&
           echo unbind\(load\)+reload:$0 --reload-week {2} '+1 day'||
           echo down" \
@@ -886,16 +937,17 @@ while true; do
       line=""
     fi
     sign=$(echo "$line" | cut -d '|' -f 1)
-    startdate=$(echo "$line" | cut -d '|' -f 2)
+    DISPLAY_DATE=$(echo "$line" | cut -d '|' -f 2)
     if [ "$key" = "ctrl-n" ]; then
       if [ "$sign" = "~" ]; then
-        startdate=""
+        DISPLAY_DATE=""
       fi
-      set -- "--new" "${startdate:-today} $DAY_START:00"
+      set -- "--new" "${DISPLAY_DATE:-today} $DAY_START:00"
     elif [ "$key" = "ctrl-g" ]; then
       set -- "--goto"
+    elif [ "$key" = "ctrl-t" ]; then
+      set -- "--set-tz" "$*"
     else
-      DISPLAY_DATE="$startdate"
       if [ "$sign" = "~" ]; then
         set -- "--week" "$DISPLAY_DATE"
       else

@@ -63,6 +63,20 @@ item_types = ["VEVENT"]
 ...
 ```
 
+Here is the complete list of configuration options:
+
+```
+###   ROOT:                 Directory containing the collections
+###   COLLECTION_LABELS:    Mappings between collections and labels
+###   SYNC_CMD (optional):  Synchronization command
+###   DAY_START (optional): Hour of start of the day (defaults to 8)
+###   DAY_END (optional):   Hour of end of the day (defaults to 18)
+###   EDITOR (optional):    Your favorite editor, is usually already exported
+###   TZ (optional):        Your favorite timezone, usually system's choice
+###   LC_TIME (optional):   Your favorite locale for date and time
+###   ZI_DIR (optional):    Location of tzdata, defaults to /usr/share/zoneinfo
+```
+
 Usage
 -----
 Use the default `fzf` keys to navigate your calendar entries, e.g., `ctrl-j`
@@ -86,12 +100,14 @@ Here is the list of available keybindings:
 | `ctrl-s` | week view | Run the synchronization command |
 | `ctrl-r` | week view | Go to current week |
 | `ctrl-g` | week view | Goto date |
+| `ctrl-t` | week view | Change timezone |
 | `enter` | day view | Open selected  calendar entry in your favorite `$EDITOR` |
 | `ctrl-n` | day view | Make a new entry |
 | `ctrl-l` | day view | Move to next day |
 | `ctrl-h` | day view | Move to previous day |
 | `esc`, `backspace` or `q` | day view | Go back to week view |
 | `ctrl-s` | day view | Run the synchronization command |
+| `ctrl-t` | day view | Change timezone |
 | `ctrl-alt-d` | day view | Delete selected entry |
 | `j` | day view | Scroll down in preview window |
 | `k` | day view | Scroll up in preview window |
