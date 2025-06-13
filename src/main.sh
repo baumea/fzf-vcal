@@ -13,9 +13,10 @@ if [ "${1:-}" = "--help" ]; then
   echo "  --yesterday            Show yesterday's appointments"
   echo "  --tomorrow             Show tomorrow's appointments"
   echo "  --goto                 Interactively enter date to jump to"
-  echo "  --new [date/date-time] Create new entry"
-  echo "  --day [date]           Show appointments of specified day"
-  echo "  --week [date]          Show week of specified date"
+  echo "  --new [date/date-time] Create new entry (today)"
+  echo "  --day [date]           Show appointments of specified day (today)"
+  echo "  --week [date]          Show week of specified date (today)"
+  echo "  --import file          Import iCalendar file"
   echo ""
   echo "You may also start this program with setting locale and timezone"
   echo "information. For instance, to see and modify all of your calendar"
@@ -566,6 +567,7 @@ __refresh_data() {
   __load_approx_data >"$APPROX_DATA_FILE"
   WEEKLY_DATA_FILE=$(mktemp)
   __load_weeks >"$WEEKLY_DATA_FILE"
+  trap 'rm -f "$APPROX_DATA_FILE" "$WEEKLY_DATA_FILE"' EXIT INT
 }
 
 ###
@@ -593,6 +595,7 @@ __datetime_human_machine() {
 ###   __edit
 ###   __new
 ###   __delete
+###   __import
 
 # __edit()
 # Edit iCalendar file.
@@ -730,6 +733,76 @@ __delete() {
     esac
   done
 }
+
+# --import
+# Import iCalendar file.
+#
+# @input $2: Absolute path to iCalendar file
+# @return: On success, returns 0, otherwise 1
+if [ "${1:-}" = "--import" ]; then
+  shift
+  file="${1:-}"
+  if [ ! -f "$file" ]; then
+    err "File \"$file\" does not exist"
+    return 1
+  fi
+  line=$(awk \
+    -v collection_labels="$COLLECTION_LABELS" \
+    "$AWK_PARSE" "$file")
+  set -- $line
+  startsec="${1:-}"
+  endsec="${2:-}"
+  if [ -z "$line" ] || [ -z "$startsec" ] || [ -z "$endsec" ]; then
+    err "File \"$file\" does not look like an iCalendar file containing an event"
+    return 1
+  fi
+  start=$(__datetime_human_machine "$startsec")
+  end=$(__datetime_human_machine "$endsec")
+  location=$(awk -v field="LOCATION" "$AWK_GET" "$file")
+  summary=$(awk -v field="SUMMARY" "$AWK_GET" "$file")
+  description=$(awk -v field="DESCRIPTION" "$AWK_GET" "$file")
+  filetmp=$(mktemp --suffix='.md')
+  (
+    echo "::: |> $start"
+    echo "::: <| $end"
+  ) >"$filetmp"
+  if [ -n "$location" ]; then
+    echo "@ $location" >>"$filetmp"
+  fi
+  (
+    echo "# $summary"
+    echo ""
+    echo "$description"
+  ) >>"$filetmp"
+  $CAT "$filetmp" >/dev/tty
+  while true; do
+    printf "Do you want to import this entry? (yes/no): " >/dev/tty
+    read -r yn
+    case $yn in
+    "yes")
+      collection=$(echo "$COLLECTION_LABELS" | tr ';' '\n' | awk '/./ {print}' | $FZF --margin="30%" --no-info --delimiter='=' --with-nth=2 --accept-nth=1)
+      if [ -z "$collection" ]; then
+        exit
+      fi
+      fpath=""
+      while [ -f "$fpath" ] || [ -z "$fpath" ]; do
+        uuid=$($UUIDGEN)
+        fpath="$ROOT/$collection/$uuid.ics"
+      done
+      cp -v "$file" "$fpath"
+      break
+      ;;
+    "no")
+      break
+      ;;
+    *)
+      echo "Please answer \"yes\" or \"no\"." >/dev/tty
+      ;;
+    esac
+  done
+  rm -f "$filetmp"
+  exit
+fi
 
 ### Start
 __refresh_data
