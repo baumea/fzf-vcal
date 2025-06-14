@@ -79,39 +79,61 @@ Here is the complete list of configuration options:
 
 Usage
 -----
-Use the default `fzf` keys to navigate your calendar entries, e.g., `ctrl-j`
-and `ctrl-k` for going down/up in the list.
 After starting `fzf-vcal`, you are presented with a view on the current week.
+You can navigate that week using `j` and `h` for going down and up.
 Hit `<enter>` on any day, and you will see all entries for that date, including
 previews. In both, the week and day views, you can add entries by hitting
 `ctrl-n`. 
 
-Here is the list of available keybindings:
-| Key | View | Action |
-| --- | ---- | ------ |
-| `enter` | week view | Switch to day view |
-| `ctrl-n` | week view | Make a new entry |
-| any letter | week view | Search in the list of all entries |
-| `backspace` on empty query | week view | Undo search |
-| `ctrl-u` | week view | Go back one week |
-| `ctrl-d` | week view | Go forth one week |
-| `ctrl-alt-u` | week view | Go back one month |
-| `ctrl-alt-d` | week view | Go forth one month |
-| `ctrl-s` | week view | Run the synchronization command |
-| `ctrl-r` | week view | Go to current week |
-| `ctrl-g` | week view | Goto date |
-| `ctrl-t` | week view | Change timezone |
-| `enter` | day view | Open selected  calendar entry in your favorite `$EDITOR` |
-| `ctrl-n` | day view | Make a new entry |
-| `ctrl-l` | day view | Move to next day |
-| `ctrl-h` | day view | Move to previous day |
-| `esc`, `backspace` or `q` | day view | Go back to week view |
-| `ctrl-s` | day view | Run the synchronization command |
-| `ctrl-t` | day view | Change timezone |
-| `ctrl-alt-d` | day view | Delete selected entry |
-| `j` | day view | Scroll down in preview window |
-| `k` | day view | Scroll up in preview window |
-| `w` | day view | Toggle line wrap in preview window ||
+Here is the list of all available keybindings:
+
+### Week view
+
+| Key | Action |
+| --- | ------ |
+| `enter` | open day |
+| `j` | down |
+| `k` | up |
+| `l` | go to next week |
+| `h` | go to previous week |
+| `ctrl-l` | go to next month |
+| `ctrl-h` | go to previous month |
+| `alt-l` | go to next year |
+| `alt-h` | go to previous year |
+| `ctrl-r` | reload and go to week that contains `today` |
+| `ctrl-g` | interactively go to specified week |
+| `ctrl-t` | set timezon |
+| `ctrl-s` | synchronize |
+| `ctrl-n` | add new entry |
+| `\` | search all appointment s|
+
+### Day view
+
+| Key | Action |
+| --- | ------ |
+| `enter` | edit appointment |
+| `j` | down |
+| `k` | up |
+| `l` | go to next day |
+| `h` | go to previous day |
+| `ctrl-l` | go to next week |
+| `ctrl-h` | go to previous week |
+| `alt-l` | go to next month |
+| `alt-h` | go to previous month |
+| `ctrl-r` | reload and go to `today` |
+| `ctrl-g` | interactively go to specified day |
+| `ctrl-t` | set timezon |
+| `ctrl-s` | synchronize |
+| `ctrl-n` | add new entry |
+| `ctrl-alt-d` | delete entry |
+| `w` | toggle line wrap in preview |
+| `ctrl-d` | down in preview |
+| `ctrl-u` | up in preview |
+| `alt-v` | view raw iCalendar file |
+| `esc` | return to week view, you can also do this with `q` or `backspace` |
+
+
+### There is more
 
 You may also invoke the script with `--help` to see further command-line options. 
 

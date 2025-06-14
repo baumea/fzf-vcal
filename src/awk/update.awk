@@ -38,15 +38,19 @@ ENDFILE {
     # date-time entry.
     gsub("\"", "\\\"", from)
     cmd = "date -d \"" from "\" +\"%N\"";
+    cmd | getline n
+    close(cmd)
+    n = n + 0
+    cmd = "date -d \"" from "\" +\"%H%M\"";
     cmd | getline t
     close(cmd)
     t = t + 0
-    if (t == 0) {
-      from_type = "DATE-TIME"
-      cmd = "date -d \"" from "\" +\"@%s\" | xargs date -u +\"%Y%m%dT%H%M00Z\" -d"
-    } else {
+    if (n != 0 || t == 0) {
       from_type = "DATE"
       cmd = "date -d \"" from "\" +\"%Y%m%d\"";
+    } else {
+      from_type = "DATE-TIME"
+      cmd = "date -d \"" from "\" +\"@%s\" | xargs date -u +\"%Y%m%dT%H%M00Z\" -d"
     }
     suc = cmd | getline from
     close(cmd)
@@ -56,15 +60,19 @@ ENDFILE {
     #
     gsub("\"", "\\\"", to)
     cmd = "date -d \"" to "\" +\"%N\"";
+    cmd | getline n
+    close(cmd)
+    n = n + 0
+    cmd = "date -d \"" to "\" +\"%H%M\"";
     cmd | getline t
     close(cmd)
     t = t + 0
-    if (t == 0) {
-      to_type = "DATE-TIME"
-      cmd = "date -d \"" to "\" +\"@%s\" | xargs date -u +\"%Y%m%dT%H%M00Z\" -d"
-    } else {
+    if (n != 0 || t == 0) {
       to_type = "DATE"
       cmd = "date -d \"" to "\" +\"%Y%m%d\"";
+    } else {
+      to_type = "DATE-TIME"
+      cmd = "date -d \"" to "\" +\"@%s\" | xargs date -u +\"%Y%m%dT%H%M00Z\" -d"
     }
     suc = cmd | getline to
     close(cmd)
