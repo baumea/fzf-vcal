@@ -91,6 +91,7 @@ Here is the list of all available keybindings:
 
 | Key | Action |
 | --- | ------ |
+| `q` | quit |
 | `enter` | open day |
 | `j` | down |
 | `k` | up |

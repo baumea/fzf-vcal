@@ -1142,6 +1142,7 @@ while true; do
           --preview="$0 --preview-week {}" \
           --bind="load:pos($DISPLAY_POS)" \
           --expect="ctrl-n,ctrl-g,ctrl-t" \
+          --bind="q:abort" \
           --bind="j:down" \
           --bind="k:up" \
           --bind="l:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
@@ -1154,9 +1155,9 @@ while true; do
           --bind="alt-h:unbind(load)+reload:$0 --reload-week {2} '-1 year'" \
           --bind="ctrl-r:rebind(load)+reload($0 --reload-week today)+show-preview" \
           --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
-          --bind="/:show-input+unbind(j)+unbind(k)+unbind(l)+unbind(h)+unbind(ctrl-l)+unbind(ctrl-h)+unbind(alt-l)+unbind(alt-h)+unbind(load)+hide-preview+reload:$0 --reload-all" \
-          --bind="backward-eof:hide-input+rebind(j)+rebind(k)+rebind(l)+rebind(h)+rebind(ctrl-l)+rebind(ctrl-h)+rebind(alt-l)+rebind(alt-h)+rebind(load)+show-preview+reload:$0 --reload-week today" \
-          --bind="esc:clear-query+hide-input+rebind(j)+rebind(k)+rebind(l)+rebind(h)+rebind(ctrl-l)+rebind(ctrl-h)+rebind(alt-l)+rebind(alt-h)+rebind(load)+show-preview+reload:$0 --reload-week today"
+          --bind="/:show-input+unbind(q)+unbind(j)+unbind(k)+unbind(l)+unbind(h)+unbind(ctrl-l)+unbind(ctrl-h)+unbind(alt-l)+unbind(alt-h)+unbind(load)+hide-preview+reload:$0 --reload-all" \
+          --bind="backward-eof:hide-input+rebind(q)+rebind(j)+rebind(k)+rebind(l)+rebind(h)+rebind(ctrl-l)+rebind(ctrl-h)+rebind(alt-l)+rebind(alt-h)+rebind(load)+show-preview+reload:$0 --reload-week today" \
+          --bind="esc:clear-query+hide-input+rebind(q)+rebind(j)+rebind(k)+rebind(l)+rebind(h)+rebind(ctrl-l)+rebind(ctrl-h)+rebind(alt-l)+rebind(alt-h)+rebind(load)+show-preview+reload:$0 --reload-week today"
     )
 
     key=$(echo "$selection" | head -1)
