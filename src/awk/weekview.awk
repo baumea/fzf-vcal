@@ -12,7 +12,7 @@ BEGIN {
 }
 /^[0-7] 00:00 -- 00:00/ { dayline = dayline " " c(); next }
 /^[0-7] 00:00 -- / { dayline = dayline " <--" $4 " " c(); next }
-/^[0-7] [0-9]{2}:[0-9]{2} -- 00:00/ { dayline = dayline " " $2 "--> " c(); next }
+/^[0-7] [0-9]{2}:[0-9]{2} -- 00:00/ { dayline = dayline " " $2 "→" c(); next }
 /^[0-7] [0-9]{2}:[0-9]{2} -- [0-9]{2}:[0-9]{2}/ { dayline = dayline " " $2 " - " $4 " " c(); next }
 /^[0-7]$/ && dayline { print "+", startofweek " +" $0-1 " days", "", dayline; }
 /^[0-7]$/ {

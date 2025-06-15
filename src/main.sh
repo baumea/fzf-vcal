@@ -123,7 +123,7 @@ if [ "${1:-}" = "--preview-event" ]; then
     start=$(datetime_str "$start" "%a ")
     end=$(datetime_str "$end" "%a ")
     location=$(awk -v field="LOCATION" "$AWK_GET" "$fpath")
-    echo "📅 ${CYAN}$start${OFF} -> ${CYAN}$end${OFF}"
+    echo "📅 ${CYAN}$start${OFF} → ${CYAN}$end${OFF}"
     if [ -n "${location:-}" ]; then
       echo "📍 ${CYAN}$location${OFF}"
     fi
@@ -137,7 +137,8 @@ fi
 # Print preview of week.
 #
 # @input $2: Line from week view
-# @req $AWK_CAL: Awk script to annotate calendar
+# @req $AWK_CALSHIFT: Awk script to make `cal` output to start on Mondays
+# @req $AWK_CALANNOT: Awk script to annotate calendar
 if [ "${1:-}" = "--preview-week" ]; then
   sign=$(echo "$2" | cut -d '|' -f 1)
   if [ "$sign" = "+" ]; then
@@ -188,12 +189,12 @@ if [ "${1:-}" = "--preview-week" ]; then
     fi
     # show
     (
-      cal "$month_pre2" "$year_pre2" | awk -v cur="${var_pre2:-}" "$AWK_CAL"
-      cal "$month_pre" "$year_pre" | awk -v cur="${var_pre:-}" "$AWK_CAL"
-      cal "$month" "$year" | awk -v cur="${var:-}" -v day="$day" "$AWK_CAL"
-      cal "$month_nex" "$year_nex" | awk -v cur="${var_nex:-}" "$AWK_CAL"
-      cal "$month_nex2" "$year_nex2" | awk -v cur="${var_nex2:-}" "$AWK_CAL"
-      cal "$month_nex3" "$year_nex3" | awk -v cur="${var_nex3:-}" "$AWK_CAL"
+      cal "$month_pre2" "$year_pre2" | awk "$AWK_CALSHIFT" | awk -v cur="${var_pre2:-}" "$AWK_CALANNOT"
+      cal "$month_pre" "$year_pre" | awk "$AWK_CALSHIFT" | awk -v cur="${var_pre:-}" "$AWK_CALANNOT"
+      cal "$month" "$year" | awk "$AWK_CALSHIFT" | awk -v cur="${var:-}" -v day="$day" "$AWK_CALANNOT"
+      cal "$month_nex" "$year_nex" | awk "$AWK_CALSHIFT" | awk -v cur="${var_nex:-}" "$AWK_CALANNOT"
+      cal "$month_nex2" "$year_nex2" | awk "$AWK_CALSHIFT" | awk -v cur="${var_nex2:-}" "$AWK_CALANNOT"
+      cal "$month_nex3" "$year_nex3" | awk "$AWK_CALSHIFT" | awk -v cur="${var_nex3:-}" "$AWK_CALANNOT"
     ) | awk '{ l[NR%8] = l[NR%8] "    " $0 } END {for (i in l) if (i>0) print l[i] }'
   fi
   exit
@@ -240,6 +241,8 @@ __view_day() {
       shift
       fpath="$(echo "$1" | sed 's/|/ /g')" # we will use | as delimiter (need to convert back!)
       shift
+      collection="$1"
+      shift
       description="$(echo "$*" | sed 's/|/:/g')" # we will use | as delimiter
       #
       daystart=$(date -d "$today 00:00:00" +"%s")
@@ -259,7 +262,7 @@ __view_day() {
       else
         continue
       fi
-      echo "$s|$e|$starttime|$endtime|$fpath|$description"
+      echo "$s|$e|$starttime|$endtime|$fpath|$collection|$description"
     done)
   fi
   echo "$sef" | sort -n | awk -v today="$today" -v daystart="$DAY_START" -v dayend="$DAY_END" "$AWK_DAYVIEW"
@@ -446,7 +449,8 @@ fi
 ###
 ### AWK scripts
 ###   AWK_APPROX:   Generate approximate data of all files
-###   AWK_CAL:      Annotate output of `cal`
+###   AWK_CALSHIFT: Shift calendar to start weeks on Mondays
+###   AWK_CALANNOT: Annotate calendar
 ###   AWK_DAYVIEW:  Generate view of the day
 ###   AWK_GET:      Print field of iCalendar file
 ###   AWK_MERGE:    Generate list of weeks with associated iCalendar files
@@ -505,9 +509,15 @@ AWK_NEW=$(
 EOF
 )
 
-AWK_CAL=$(
+AWK_CALSHIFT=$(
   cat <<'EOF'
-@@include src/awk/cal.awk
+@@include src/awk/calshift.awk
+EOF
+)
+
+AWK_CALANNOT=$(
+  cat <<'EOF'
+@@include src/awk/calannot.awk
 EOF
 )
 
@@ -880,7 +890,7 @@ __refresh_data
 
 ### Exports
 # The preview calls run in subprocesses. These require the following variables:
-export ROOT CAT AWK_GET AWK_CAL CYAN WHITE ITALIC OFF
+export ROOT CAT AWK_GET AWK_CALSHIFT AWK_CALANNOT CYAN WHITE ITALIC OFF
 # The reload commands also run in subprocesses, and use in addition
 export COLLECTION_LABELS DAY_START DAY_END AWK_DAYVIEW AWK_WEEKVIEW AWK_PARSE
 # as well as the following variables that will be dynamically specified. So, we
@@ -995,13 +1005,19 @@ while true; do
             )+transform(
               [ -n \"\${TZ:-}\" ] && echo \"change-list-label:\$WHITE\$ITALIC(\$TZ)\$OFF\"
             )+transform(
-              echo {} | grep \|\| || echo show-preview
+              [ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview
             )" \
           --bind="start:hide-preview" \
-          --bind="j:down+hide-preview+transform:echo {} | grep \|\| || echo show-preview" \
-          --bind="k:up+hide-preview+transform:echo {} | grep \|\| || echo show-preview" \
+          --bind="j:down+hide-preview+transform([ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview)" \
+          --bind="k:up+hide-preview+transform([ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview)" \
+          --bind="ctrl-j:down+hide-preview+transform([ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview)" \
+          --bind="ctrl-k:up+hide-preview+transform([ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview)" \
+          --bind="down:down+hide-preview+transform([ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview)" \
+          --bind="up:up+hide-preview+transform([ -n \"\$(echo {} | cut -d '|' -f 5)\" ] && echo show-preview)" \
           --bind="l:hide-preview+reload:$0 --reload-day {1} '+1 day'" \
           --bind="h:hide-preview+reload:$0 --reload-day {1} '-1 day'" \
+          --bind="right:hide-preview+reload:$0 --reload-day {1} '+1 day'" \
+          --bind="left:hide-preview+reload:$0 --reload-day {1} '-1 day'" \
           --bind="ctrl-l:hide-preview+reload:$0 --reload-day {1} '+1 week'" \
           --bind="ctrl-h:hide-preview+reload:$0 --reload-day {1} '-1 week'" \
           --bind="alt-l:hide-preview+reload:$0 --reload-day {1} '+1 month'" \
@@ -1074,6 +1090,8 @@ while true; do
           --bind="k:up" \
           --bind="l:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
           --bind="h:unbind(load)+reload:$0 --reload-week {2} '-1 week'" \
+          --bind="right:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
+          --bind="left:unbind(load)+reload:$0 --reload-week {2} '-1 week'" \
           --bind="ctrl-l:unbind(load)+reload:$0 --reload-week {2} '+1 month'" \
           --bind="ctrl-h:unbind(load)+reload:$0 --reload-week {2} '-1 month'" \
           --bind="alt-l:unbind(load)+reload:$0 --reload-week {2} '+1 year'" \
