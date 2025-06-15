@@ -17,6 +17,7 @@ if [ "${1:-}" = "--help" ]; then
   echo "  --day [date]           Show appointments of specified day (today)"
   echo "  --week [date]          Show week of specified date (today)"
   echo "  --import file          Import iCalendar file"
+  echo "  --import-ni file       Import iCalendar file non-interactively"
   echo "  --git cmd              Run git command cmd relative to calendar root"
   echo "  --git-init             Enable the use of git"
   echo ""
@@ -456,6 +457,7 @@ fi
 ###   AWK_MERGE:    Generate list of weeks with associated iCalendar files
 ###   AWK_NEW:      Make new iCalendar file
 ###   AWK_PARSE:    Timezone aware parsing of iCalendar file for day view
+###   AWK_SET:      Set value of specific field in iCalendar file
 ###   AWK_UPDATE:   Update iCalendar file
 ###   AWK_WEEKVIEW: Generate view of the week
 ###
@@ -518,6 +520,12 @@ EOF
 AWK_CALANNOT=$(
   cat <<'EOF'
 @@include src/awk/calannot.awk
+EOF
+)
+
+AWK_SET=$(
+  cat <<'EOF'
+@@include src/awk/set.awk
 EOF
 )
 
@@ -612,6 +620,7 @@ __datetime_human_machine() {
 ###   __edit
 ###   __new
 ###   __delete
+###   __import_to_collection
 
 # __edit()
 # Edit iCalendar file.
@@ -762,12 +771,70 @@ __delete() {
   done
 }
 
+# __import_to_collection()
+# Import iCalendar file to specified collection. The only modification made to
+# the file is setting the UID.
+#
+# @input $1: path to iCalendar file
+# @input $2: collection name
+# @req $ROOT: Path that contains the collections (see configuration)
+# @req $UUIDGEN: `uuidgen` command
+# @req $AWK_SET: Awk script to set field value
+__import_to_collection() {
+  file="$1"
+  collection="$2"
+  fpath=""
+  while [ -f "$fpath" ] || [ -z "$fpath" ]; do
+    uuid=$($UUIDGEN)
+    fpath="$ROOT/$collection/$uuid.ics"
+  done
+  filetmp=$(mktemp)
+  awk -v field="UID" -v value="$uuid" "$AWK_SET" "$file" >"$filetmp"
+  mv "$filetmp" "$fpath"
+  if [ -n "${GIT:-}" ]; then
+    $GIT add "$fpath"
+    $GIT commit -m "Imported event" -- "$fpath"
+  fi
+}
+
 ###
 ### Extra command-line options
+###   --import-ni
 ###   --import
 ###   --git
 ###   --git-init
 ###
+
+# --import-ni
+# Import iCalendar file noninteractively
+#
+# @input $2: Absolute path to iCalendar file
+# @input $3: Collection
+# @req $COLLECTION_LABELS: Mapping between collections and labels (see configuration)
+# @req $ROOT: Path that contains the collections (see configuration)
+# @return: On success, returns 0, otherwise 1
+if [ "${1:-}" = "--import-ni" ]; then
+  shift
+  file="${1:-}"
+  collection="${2:-}"
+  if [ ! -f "$file" ]; then
+    err "File \"$file\" does not exist"
+    exit 1
+  fi
+  for c in $(echo "$COLLECTION_LABELS" | sed "s|=[^;]*;| |g"); do
+    if [ "$collection" = "$c" ]; then
+      cexists="yes"
+      break
+    fi
+  done
+  if [ -n "${cexists:-}" ] && [ -d "$ROOT/$collection" ]; then
+    __import_to_collection "$file" "$collection"
+  else
+    err "Collection \"$collection\" does not exist"
+    exit 1
+  fi
+  exit
+fi
 
 # --import
 # Import iCalendar file.
@@ -776,8 +843,6 @@ __delete() {
 # @req $COLLECTION_LABELS: Mapping between collections and lables (see configuration)
 # @req $AWK_PARSE: Parse awk script
 # @req $AWK_GET: Awk script to extract fields from iCalendar file
-# @req $ROOT: Path that contains the collections (see configuration)
-# @req $UUIDGEN: `uuidgen` command
 # @req $FZF: `fzf` command
 # @req $CAT: Program to print
 # @return: On success, returns 0, otherwise 1
@@ -826,16 +891,7 @@ if [ "${1:-}" = "--import" ]; then
       if [ -z "$collection" ]; then
         exit
       fi
-      fpath=""
-      while [ -f "$fpath" ] || [ -z "$fpath" ]; do
-        uuid=$($UUIDGEN)
-        fpath="$ROOT/$collection/$uuid.ics"
-      done
-      cp -v "$file" "$fpath"
-      if [ -n "${GIT:-}" ]; then
-        $GIT add "$fpath"
-        $GIT commit -m "Imported event" -- "$fpath"
-      fi
+      __import_to_collection "$file" "$collection"
       break
       ;;
     "no")
