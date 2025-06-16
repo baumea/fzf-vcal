@@ -106,7 +106,9 @@ Here is the list of all available keybindings:
 | `ctrl-t` | set timezon |
 | `ctrl-s` | synchronize |
 | `ctrl-n` | add new entry |
-| `\` | search all appointment s|
+| `\` | search all appointment s |
+| `x` | Cancel and confirm entry |
+| `c` | Unconfirm and confirm entry |
 
 ### Day view
 

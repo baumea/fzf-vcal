@@ -1,3 +1,9 @@
+## src/awk/calannot.awk
+## Annotate monthly calendar
+##
+## @assign cur: Day-of-month to mark as `today`
+## @assign day: Day-of-month to highlight
+
 BEGIN {
   BLACK = "\033[1;30m"
   GREEN = "\033[1;32m"

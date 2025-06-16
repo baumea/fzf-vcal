@@ -124,7 +124,13 @@ if [ "${1:-}" = "--preview-event" ]; then
     start=$(datetime_str "$start" "%a ")
     end=$(datetime_str "$end" "%a ")
     location=$(awk -v field="LOCATION" "$AWK_GET" "$fpath")
-    echo "📅 ${CYAN}$start${OFF} → ${CYAN}$end${OFF}"
+    status=$(awk -v field="STATUS" "$AWK_GET" "$fpath")
+    if [ "$status" = "TENTATIVE" ]; then
+      symb="🟡"
+    elif [ "$status" = "CANCELLED" ]; then
+      symb="❌"
+    fi
+    echo "📅${symb:-} ${CYAN}$start${OFF} → ${CYAN}$end${OFF}"
     if [ -n "${location:-}" ]; then
       echo "📍 ${CYAN}$location${OFF}"
     fi
@@ -244,6 +250,8 @@ __view_day() {
       shift
       collection="$1"
       shift
+      status="$1"
+      shift
       description="$(echo "$*" | sed 's/|/:/g')" # we will use | as delimiter
       #
       daystart=$(date -d "$today 00:00:00" +"%s")
@@ -263,7 +271,7 @@ __view_day() {
       else
         continue
       fi
-      echo "$s|$e|$starttime|$endtime|$fpath|$collection|$description"
+      echo "$s|$e|$starttime|$endtime|$fpath|$collection|$description|$status"
     done)
   fi
   echo "$sef" | sort -n | awk -v today="$today" -v daystart="$DAY_START" -v dayend="$DAY_END" "$AWK_DAYVIEW"
@@ -277,6 +285,7 @@ __view_day() {
 # @req $ROOT:              Path that contains the collections (see configuration)
 # @req $COLLECTION_LABELS: Mapping between collections and lables (see configuration)
 # @req $AWK_WEEKVIEW:      Week-view awk script
+# @req colors
 __view_week() {
   weeknr=$(date -d "$DISPLAY_DATE" +"%G.%V")
   files=$(grep "^$weeknr\ " "$WEEKLY_DATA_FILE" | cut -d " " -f 2-)
@@ -302,7 +311,16 @@ __view_week() {
       shift
       #fpath="$1"
       shift
-      description="$*"
+      collection="$1"
+      shift
+      status="$1"
+      shift
+      if [ "$status" = "TENTATIVE" ]; then
+        symb="$FAINT$CYAN"
+      elif [ "$status" = "CANCELLED" ]; then
+        symb="$STRIKE"
+      fi
+      description="${symb:-}$*$OFF"
       for i in $(seq 0 7); do
         daystart=$(date -d "$startofweek +$i days 00:00:00" +"%s")
         dayend=$(date -d "$startofweek +$i days 23:59:59" +"%s")
@@ -536,8 +554,9 @@ EOF
 #RED="\033[1;31m"
 WHITE="\033[1;97m"
 CYAN="\033[1;36m"
+STRIKE="\033[9m"
 ITALIC="\033[3m"
-#FAINT="\033[2m"
+FAINT="\033[2m"
 OFF="\033[m"
 
 ###
@@ -596,8 +615,9 @@ __refresh_data() {
 }
 
 ###
-### UX helper functions
+### Helper functions
 ###   __datetime_human_machine
+###   __summary_for_commit
 ###
 
 # __datetime_human_machine()
@@ -614,6 +634,15 @@ __datetime_human_machine() {
   date -d "@$s" +"$dfmt"
 }
 
+# __summary_for_commit()
+# Get summary string that can be used in for git-commit messages.
+#
+# @input $1: iCalendar file path
+# @req $AWK_GET: Awk script to extract fields from iCalendar file
+__summary_for_commit() {
+  awk -v field="SUMMARY" "$AWK_GET" "$1" | tr -c -d "[:alnum:][:blank:]" | head -c 15
+}
+
 ###
 ### iCalendar modification wrapper
 ###
@@ -621,6 +650,8 @@ __datetime_human_machine() {
 ###   __new
 ###   __delete
 ###   __import_to_collection
+###   __cancel_toggle
+###   __tentative_toggle
 
 # __edit()
 # Edit iCalendar file.
@@ -661,7 +692,7 @@ __edit() {
       mv "$filenew" "$fpath"
       if [ -n "${GIT:-}" ]; then
         $GIT add "$fpath"
-        $GIT commit -m "Modified event" -- "$fpath"
+        $GIT commit -m "Modified event '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
       fi
       __refresh_data
     else
@@ -727,7 +758,7 @@ __new() {
       mv "$filenew" "$fpath"
       if [ -n "${GIT:-}" ]; then
         $GIT add "$fpath"
-        $GIT commit -m "Added event" -- "$fpath"
+        $GIT commit -m "Added event '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
       fi
       start=$(awk -v field="DTSTART" "$AWK_GET" "$fpath" | grep -o '[0-9]\{8\}')
     else
@@ -757,7 +788,7 @@ __delete() {
       rm -v "$fpath"
       if [ -n "${GIT:-}" ]; then
         $GIT add "$fpath"
-        $GIT commit -m "Deleted event" -- "$fpath"
+        $GIT commit -m "Deleted event '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
       fi
       break
       ;;
@@ -793,7 +824,52 @@ __import_to_collection() {
   mv "$filetmp" "$fpath"
   if [ -n "${GIT:-}" ]; then
     $GIT add "$fpath"
-    $GIT commit -m "Imported event" -- "$fpath"
+    $GIT commit -m "Imported event '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
+  fi
+}
+
+# __cancel_toggle()
+# Set status of appointment to CANCELLED or CONFIRMED (toggle)
+#
+# @input $1: path to iCalendar file
+# @req $ROOT: Path that contains the collections (see configuration)
+# @req $AWK_SET: Awk script to set field value
+# @req $AWK_GET: Awk script to extract fields from iCalendar file
+__cancel_toggle() {
+  fpath="$ROOT/$1"
+  status=$(awk -v field="STATUS" "$AWK_GET" "$fpath")
+  newstatus="CANCELLED"
+  if [ "${status:-}" = "$newstatus" ]; then
+    newstatus="CONFIRMED"
+  fi
+  filetmp=$(mktemp)
+  awk -v field="STATUS" -v value="$newstatus" "$AWK_SET" "$fpath" >"$filetmp"
+  mv "$filetmp" "$fpath"
+  if [ -n "${GIT:-}" ]; then
+    $GIT add "$fpath"
+    $GIT commit -m "Event '$(__summary_for_commit "$fpath") ...' has now status $status" -- "$fpath"
+  fi
+}
+
+# __tentative_toggle
+# Toggle status flag: CONFIRMED <-> TENTATIVE
+# @input $1: path to iCalendar file
+# @req $ROOT: Path that contains the collections (see configuration)
+# @req $AWK_SET: Awk script to set field value
+# @req $AWK_GET: Awk script to extract fields from iCalendar file
+__tentative_toggle() {
+  fpath="$ROOT/$1"
+  status=$(awk -v field="STATUS" "$AWK_GET" "$fpath")
+  newstatus="TENTATIVE"
+  if [ "${status:-}" = "$newstatus" ]; then
+    newstatus="CONFIRMED"
+  fi
+  filetmp=$(mktemp)
+  awk -v field="STATUS" -v value="$newstatus" "$AWK_SET" "$fpath" >"$filetmp"
+  mv "$filetmp" "$fpath"
+  if [ -n "${GIT:-}" ]; then
+    $GIT add "$fpath"
+    $GIT commit -m "Event '$(__summary_for_commit "$fpath") ...' has now status $status" -- "$fpath"
   fi
 }
 
@@ -946,7 +1022,7 @@ __refresh_data
 
 ### Exports
 # The preview calls run in subprocesses. These require the following variables:
-export ROOT CAT AWK_GET AWK_CALSHIFT AWK_CALANNOT CYAN WHITE ITALIC OFF
+export ROOT CAT AWK_GET AWK_CALSHIFT AWK_CALANNOT CYAN STRIKE FAINT WHITE ITALIC OFF
 # The reload commands also run in subprocesses, and use in addition
 export COLLECTION_LABELS DAY_START DAY_END AWK_DAYVIEW AWK_WEEKVIEW AWK_PARSE
 # as well as the following variables that will be dynamically specified. So, we
@@ -1055,7 +1131,7 @@ while true; do
           --with-nth='{6}' \
           --accept-nth='1,2,3,4,5' \
           --preview="$0 --preview-event {}" \
-          --expect="ctrl-n,ctrl-t,ctrl-g,ctrl-alt-d,esc,backspace,q,alt-v" \
+          --expect="ctrl-n,ctrl-t,ctrl-g,ctrl-alt-d,esc,backspace,q,alt-v,x,c" \
           --bind="load:pos(1)+transform(
               echo change-border-label:🗓️ \$(date -d {1} +\"%A %e %B %Y\")
             )+transform(
@@ -1111,6 +1187,10 @@ while true; do
       set -- "--week" "$DISPLAY_DATE"
     elif [ "$key" = "alt-v" ] && [ -f "$ROOT/$fpath" ]; then
       $EDITOR "$ROOT/$fpath"
+    elif [ "$key" = "x" ] && [ -f "$ROOT/$fpath" ]; then
+      __cancel_toggle "$fpath"
+    elif [ "$key" = "c" ] && [ -f "$ROOT/$fpath" ]; then
+      __tentative_toggle "$fpath"
     elif [ -z "$key" ] && [ -n "$fpath" ]; then
       __edit "$start" "$end" "$fpath"
       set -- "--day" "$DISPLAY_DATE"

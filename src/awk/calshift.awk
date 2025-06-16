@@ -1,3 +1,7 @@
+## src/awk/calshift.awk
+## Rearrange days of a monthly output from cal (1), such that Monday is the
+## first day of the week.
+
 BEGIN { 
   ORS = ""
   W3 = "   "
