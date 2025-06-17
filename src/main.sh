@@ -324,6 +324,8 @@ __view_week() {
         symb="$FAINT$CYAN"
       elif [ "$status" = "CANCELLED" ]; then
         symb="$STRIKE"
+      else
+        symb=""
       fi
       description="${symb:-}$*$OFF"
       for i in $(seq 0 7); do
@@ -813,10 +815,11 @@ __delete() {
     read -r yn
     case $yn in
     "yes")
+      sfg="$(__summary_for_commit "$fpath")"
       rm -v "$fpath"
       if [ -n "${GIT:-}" ]; then
         $GIT add "$fpath"
-        $GIT commit -m "Deleted event '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
+        $GIT commit -m "Deleted event '$sfg ...'" -- "$fpath"
       fi
       break
       ;;

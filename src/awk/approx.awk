@@ -96,7 +96,7 @@ function fn(path,    n, a) {
 function title(start, summary) {
   summary = getcontent(summary)
   gsub("\n", " ", summary) # This will be put on a single line
-  gsub("|",  ":", summary) # we use "|" as delimiter
+  gsub("\\|",  ":", summary) # we use "|" as delimiter
   depth = split(FILENAME, path, "/")
   collection = depth > 1 ? path[depth-1] : ""
   collection = collection in collection2label ? collection2label[collection] : collection
