@@ -115,6 +115,7 @@ Here is the list of all available keybindings:
 | Key | Action |
 | --- | ------ |
 | `enter` | edit appointment |
+| `a` | open attachment list of appointment |
 | `j` | down |
 | `k` | up |
 | `l` | go to next day |

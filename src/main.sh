@@ -112,6 +112,7 @@ datetime_str() {
 # @input $1: Line from day view containing an event
 # @req $ROOT: Path that contains the collections (see configuration)
 # @req $AWK_GET: Awk script to extract fields from iCalendar file
+# @req $AWK_ATTACHLS: Awk script to list attachments
 # @req $CAT: Program to print
 # @req colors
 if [ "${1:-}" = "--preview-event" ]; then
@@ -133,6 +134,10 @@ if [ "${1:-}" = "--preview-event" ]; then
     echo "📅${symb:-} ${CYAN}$start${OFF} → ${CYAN}$end${OFF}"
     if [ -n "${location:-}" ]; then
       echo "📍 ${CYAN}$location${OFF}"
+    fi
+    attcnt=$(awk "$AWK_ATTACHLS" "$fpath" | wc -l)
+    if [ "$attcnt" -gt 0 ]; then
+      echo "🔗 $attcnt attachments"
     fi
     echo ""
     awk -v field="DESCRIPTION" "$AWK_GET" "$fpath" | $CAT
@@ -428,6 +433,7 @@ if [ ! -d "$ZI_DIR" ]; then
   err "Could not determine time-zone information"
   exit 1
 fi
+OPEN=${OPEN:-open}
 
 ###
 ### Check and load required tools
@@ -478,6 +484,10 @@ fi
 ###   AWK_SET:      Set value of specific field in iCalendar file
 ###   AWK_UPDATE:   Update iCalendar file
 ###   AWK_WEEKVIEW: Generate view of the week
+###   AWK_ATTACHLS: List attachments
+###   AWK_ATTACHDD: Store attachment
+###   AWK_ATTACHRM: Remove attachment
+###   AWK_ATTACH:   Add attachment
 ###
 
 # TODO: Complete documentation
@@ -544,6 +554,30 @@ EOF
 AWK_SET=$(
   cat <<'EOF'
 @@include src/awk/set.awk
+EOF
+)
+
+AWK_ATTACHLS=$(
+  cat <<'EOF'
+@@include src/awk/attachls.awk
+EOF
+)
+
+AWK_ATTACHDD=$(
+  cat <<'EOF'
+@@include src/awk/attachdd.awk
+EOF
+)
+
+AWK_ATTACHRM=$(
+  cat <<'EOF'
+@@include src/awk/attachrm.awk
+EOF
+)
+
+AWK_ATTACH=$(
+  cat <<'EOF'
+@@include src/awk/attach.awk
 EOF
 )
 
@@ -652,6 +686,7 @@ __summary_for_commit() {
 ###   __import_to_collection
 ###   __cancel_toggle
 ###   __tentative_toggle
+###   __add_attachment
 
 # __edit()
 # Edit iCalendar file.
@@ -853,6 +888,7 @@ __cancel_toggle() {
 
 # __tentative_toggle
 # Toggle status flag: CONFIRMED <-> TENTATIVE
+#
 # @input $1: path to iCalendar file
 # @req $ROOT: Path that contains the collections (see configuration)
 # @req $AWK_SET: Awk script to set field value
@@ -871,6 +907,46 @@ __tentative_toggle() {
     $GIT add "$fpath"
     $GIT commit -m "Event '$(__summary_for_commit "$fpath") ...' has now status $status" -- "$fpath"
   fi
+}
+
+# __add_attachment
+# Prepend attachment to iCalendar file
+#
+# @input $1: path to iCalendar file
+# @req $ROOT: Path that contains the collections (see configuration)
+# @req $FZF: Fuzzy finder
+# @req $AWK_ATTACH: Awk script to add attachment
+__add_attachment() {
+  fpath="$ROOT/$1"
+  sel=$(
+    $FZF --prompt="Select attachment> " \
+      --walker="file,hidden" \
+      --walker-root="$HOME" \
+      --expect="ctrl-c,ctrl-g,ctrl-q,esc"
+  )
+  key=$(echo "$sel" | head -1)
+  f=$(echo "$sel" | tail -1)
+  if [ -n "$key" ]; then
+    f=""
+  fi
+  if [ -z "$f" ] || [ ! -f "$f" ]; then
+    return
+  fi
+  filename=$(basename "$f")
+  mime=$(file -b -i "$f" | cut -d ';' -f 1)
+  if [ -z "$mime" ]; then
+    mime="application/octet-stream"
+  fi
+  fenc=$(mktemp)
+  base64 "$f" >"$fenc"
+  filetmp=$(mktemp)
+  awk -v file="$fenc" -v mime="$mime" -v filename="$filename" "$AWK_ATTACH" "$fpath" >"$filetmp"
+  mv "$filetmp" "$fpath"
+  if [ -n "${GIT:-}" ]; then
+    $GIT add "$fpath"
+    $GIT commit -m "Added attachment to '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
+  fi
+  rm "$fenc"
 }
 
 ###
@@ -1022,7 +1098,7 @@ __refresh_data
 
 ### Exports
 # The preview calls run in subprocesses. These require the following variables:
-export ROOT CAT AWK_GET AWK_CALSHIFT AWK_CALANNOT CYAN STRIKE FAINT WHITE ITALIC OFF
+export ROOT CAT AWK_GET AWK_CALSHIFT AWK_CALANNOT CYAN STRIKE FAINT WHITE ITALIC OFF AWK_ATTACHLS
 # The reload commands also run in subprocesses, and use in addition
 export COLLECTION_LABELS DAY_START DAY_END AWK_DAYVIEW AWK_WEEKVIEW AWK_PARSE
 # as well as the following variables that will be dynamically specified. So, we
@@ -1031,6 +1107,7 @@ export COLLECTION_LABELS DAY_START DAY_END AWK_DAYVIEW AWK_WEEKVIEW AWK_PARSE
 # __export()
 # Re-export dynamical variables to subshells.
 __export() {
+  DISPLAY_DATE=$(date -R -d "$DISPLAY_DATE")
   export DISPLAY_DATE WEEKLY_DATA_FILE APPROX_DATA_FILE
   if [ -n "${TZ:-}" ]; then
     export TZ
@@ -1131,7 +1208,7 @@ while true; do
           --with-nth='{6}' \
           --accept-nth='1,2,3,4,5' \
           --preview="$0 --preview-event {}" \
-          --expect="ctrl-n,ctrl-t,ctrl-g,ctrl-alt-d,esc,backspace,q,alt-v,x,c" \
+          --expect="ctrl-n,ctrl-t,ctrl-g,ctrl-alt-d,esc,backspace,q,alt-v,x,c,a" \
           --bind="load:pos(1)+transform(
               echo change-border-label:🗓️ \$(date -d {1} +\"%A %e %B %Y\")
             )+transform(
@@ -1191,6 +1268,119 @@ while true; do
       __cancel_toggle "$fpath"
     elif [ "$key" = "c" ] && [ -f "$ROOT/$fpath" ]; then
       __tentative_toggle "$fpath"
+    elif [ "$key" = "a" ] && [ -f "$ROOT/$fpath" ]; then
+      att=$(
+        awk "$AWK_ATTACHLS" "$ROOT/$fpath" |
+          $FZF \
+            --delimiter="\t" \
+            --accept-nth=1,2,3,4 \
+            --with-nth="Attachment {1}: \"{2}\" {3} ({5})" \
+            --no-sort \
+            --tac \
+            --margin="30%,30%" \
+            --border=bold \
+            --border-label="Attachment View     Keys: <enter> open, <ctrl-alt-d> delete, <shift-a> add" \
+            --expect="A" \
+            --expect="ctrl-c,ctrl-g,ctrl-q,ctrl-d,esc,q,backspace" \
+            --print-query \
+            --bind="start:hide-input" \
+            --bind="ctrl-alt-d:show-input+change-query(ctrl-alt-d)+accept" \
+            --bind="load:transform:[ \"\$FZF_TOTAL_COUNT\" -eq 0 ] && echo 'unbind(enter)+unbind(ctrl-alt-d)'" \
+            --bind="w:toggle-wrap" \
+            --bind="j:down" \
+            --bind="k:up" ||
+          true
+      )
+      key=$(echo "$att" | head -2 | xargs)
+      sel=$(echo "$att" | tail -1)
+      if [ "$key" = "ctrl-c" ] ||
+        [ "$key" = "ctrl-g" ] ||
+        [ "$key" = "ctrl-q" ] ||
+        [ "$key" = "ctrl-d" ] ||
+        [ "$key" = "esc" ] ||
+        [ "$key" = "q" ] ||
+        [ "$key" = "backspace" ]; then
+        continue
+      fi
+      if [ "$key" = "A" ]; then
+        __add_attachment "$fpath"
+        __refresh_data
+        continue
+      fi
+      attid=$(echo "$sel" | cut -f 1)
+      attname=$(echo "$sel" | cut -f 2)
+      attfmt=$(echo "$sel" | cut -f 3)
+      attenc=$(echo "$sel" | cut -f 4)
+      if [ -z "$attid" ]; then
+        # This line should be unreachable
+        continue
+      fi
+      if [ "$key" = "ctrl-alt-d" ]; then
+        while true; do
+          printf "Are you sure you want to delete attachment \"%s\"? (yes/no): " "$attid" >/dev/tty
+          read -r yn
+          case $yn in
+          "yes")
+            filetmp=$(mktemp)
+            awk -v id="$attid" "$AWK_ATTACHRM" "$ROOT/$fpath" >"$filetmp"
+            mv "$filetmp" "$ROOT/$fpath"
+            if [ -n "${GIT:-}" ]; then
+              $GIT add "$fpath"
+              $GIT commit -m "Deleted attachment from event '$(__summary_for_commit "$fpath") ...'" -- "$fpath"
+            fi
+            __refresh_data
+            break
+            ;;
+          "no")
+            break
+            ;;
+          *)
+            echo "Please answer \"yes\" or \"no\"." >/dev/tty
+            ;;
+          esac
+        done
+        continue
+      fi
+      if [ "$attenc" != "base64" ]; then
+        err "Unsupported attachment encoding: $attenc"
+        read -r tmp
+        continue
+      fi
+      if [ -n "$attname" ]; then
+        tmpdir=$(mktemp -d)
+        attpath="$tmpdir/$attname"
+      elif [ -n "$attfmt" ]; then
+        attext=$(echo "$attfmt" | cut -d "/" -f 2)
+        attpath=$(mktemp --suffix="$attext")
+      else
+        attpath=$(mktemp)
+      fi
+      # Get file and uncode
+      awk -v id="$attid" "$AWK_ATTACHDD" "$ROOT/$fpath" | base64 -d >"$attpath"
+      fn=$(file "$attpath")
+      while true; do
+        printf "Are you sure you want to open \"%s\"? (yes/no): " "$fn" >/dev/tty
+        read -r yn
+        case $yn in
+        "yes")
+          $OPEN "$attpath"
+          printf "Press <enter> to continue." >/dev/tty
+          read -r tmp
+          break
+          ;;
+        "no")
+          break
+          ;;
+        *)
+          echo "Please answer \"yes\" or \"no\"." >/dev/tty
+          ;;
+        esac
+      done
+      # Clean up
+      rm -f "$attpath"
+      if [ -n "${tmpdir:-}" ] && [ -d "${tmpdir:-}" ]; then
+        rm -rf "$tmpdir"
+      fi
     elif [ -z "$key" ] && [ -n "$fpath" ]; then
       __edit "$start" "$end" "$fpath"
       set -- "--day" "$DISPLAY_DATE"

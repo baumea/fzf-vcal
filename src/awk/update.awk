@@ -92,13 +92,10 @@ ENDFILE {
     if (suc != 1) {
       exit 1
     }
-    summary = escape(summary)
-    location = escape(location)
-    desc = escape(desc)
   }
 }
 
-NR == FNR && desc { desc = desc "\\n" $0; next }
+NR == FNR && desc { desc = desc "\\n" escape($0); next }
 NR == FNR {
   from = substr($0, 1, 6) == "::: |>" ? substr($0, 8) : ""
   if (!from)
@@ -108,22 +105,17 @@ NR == FNR {
   if (!to)
     exit 1
   getline
-  location = substr($0, 1, 2) == "@ " ? substr($0, 3) : ""
+  location = substr($0, 1, 2) == "@ " ? escape(substr($0, 3)) : ""
   if (location) getline
-  summary = substr($0, 1, 2) == "# " ? substr($0, 3) : ""
+  summary = substr($0, 1, 2) == "# " ? escape(substr($0, 3)) : ""
   if (!summary)
     exit 1
   getline # This line should be empty
   getline # First line of description
-  desc = $0
+  desc = escape($0)
   next
 }
 
-/^BEGIN:VEVENT$/        { inside = 1; print; next }
-/^X-ALT-DESC/ && inside { next } # drop this alternative description
-/^ / && inside          { next } # drop this folded line (the only content with folded lines will be updated)
-/^(DTSTART|DTEND|SUMMARY|LOCATION|CATEGORIES|DESCRIPTION|LAST-MODIFIED)/ && inside { next } # skip for now, we will write updated fields at the end
-/^SEQUENCE/ && inside   { seq = $2; next } # store sequence number and skip
 /^END:VEVENT$/ {
   seq = seq ? seq + 1 : 1
   print "SEQUENCE:" seq
@@ -135,4 +127,10 @@ NR == FNR {
   print_fold("LOCATION:",    location)
   inside = ""
 }
+/^BEGIN:VEVENT$/           { inside = 1 }
+/^ / && skipf              { next } # drop this folded line
+/^[^ ]/ && skipf           { skipf = 0 }
+/^(DTSTART|DTEND|SUMMARY|LOCATION|CATEGORIES|DESCRIPTION|LAST-MODIFIED|X-ALT-DESC)/ && inside { skipf = 1; next } # skip for now, we will write updated fields at the end
+/^X-ALT-DESC/ && inside    { skipf = 1; next } # skip
+/^SEQUENCE/ && inside      { seq = $2; next } # store sequence number and skip
 { print }
