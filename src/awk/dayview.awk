@@ -27,7 +27,7 @@ function color_from_status(status) {
 # @return: Single-line string
 function allday(collection, desc, status,    color) {
   color = color_from_status(status)
-  return collection " " LIGHT_CYAN ITALIC FAINT "    (allday)    " OFF color desc OFF
+  return collection " " LIGHT_CYAN ITALIC FAINT "    (allday)   " OFF color desc OFF
 }
 
 # Return line for multi-day event, or event that starts at midnight, which ends today.
@@ -40,7 +40,7 @@ function allday(collection, desc, status,    color) {
 # @return: Single-line string
 function endstoday(stop, collection, desc, status) {
   color = color_from_status(status)
-  return collection " " LIGHT_CYAN "      -- " stop OFF ": " color desc OFF
+  return collection " " LIGHT_CYAN "      → " stop ": " OFF color desc OFF
 }
 
 # Return line for event that starts sometime today.
@@ -55,9 +55,9 @@ function endstoday(stop, collection, desc, status) {
 function slice(start, stop, collection, desc, status) {
   color = color_from_status(status)
   if (stop == "00:00")
-    return collection " " LIGHT_CYAN start " --      " OFF ": " color desc OFF
+    return collection " " LIGHT_CYAN start " →      " ": " OFF color desc OFF
    else
-    return collection " " LIGHT_CYAN start OFF " -- " LIGHT_CYAN stop OFF ": " color desc OFF
+    return collection " " LIGHT_CYAN start " – " stop ": " OFF color desc OFF
 }
 
 # Print line for a single hour entry.
@@ -65,7 +65,7 @@ function slice(start, stop, collection, desc, status) {
 # @input hour: Hour of the entry
 function hrline(hour) {
   hour = hour < 10 ? "0"hour : hour
-  print today, hour, "", "", "", "   " FAINT hour ":00           ----------------------" OFF
+  print today, hour, "", "", "", "   " FAINT hour ":00          ----------------------" OFF
 }
 
 # Print lines for hour entries before an event that starts at `start` and stops

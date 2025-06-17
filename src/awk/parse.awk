@@ -8,6 +8,40 @@
 
 # Functions
 
+# Unescape string
+#
+# @local variables: i, c, c2, res
+# @input str: String
+# @return: Unescaped string
+function unescape(str,    i, c, c2, res) {
+  for(i=1; i<=length(str);i++) {
+    c = substr(str, i, 1)
+    if (c != "\\") {
+      res = res c
+      continue
+    }
+    i++
+    c2 = substr(str, i, 1)
+    if (c2 == "n" || c2 == "N") {
+      res = res "\n"
+      continue
+    }
+    # Alternatively, c2 is "\\" or "," or ";". In each case, append res with
+    # c2. If the strings has been escaped correctly, then the character c2
+    # cannot be anything else. To be fail-safe, simply append res with c2.
+    res = res c2
+  }
+  return res
+}
+
+# Isolate content part of an iCalendar line, and unescape.
+#
+# @input str: String
+# @return: Unescaped content part
+function getcontent(str) {
+  return unescape(substr(str, index(str, ":") + 1))
+}
+
 # Time-zone aware parsing of the date/date-time entry at the current record.
 #
 # @local variables: dt
@@ -54,12 +88,8 @@ function parse_duration(duration,    dt, dta, i, n, a, seps) {
 # @input end: End time of event, or event duration (see `dur`)
 # @input summary: Content of SUMMARY field of the event
 function print_data(start, dur, end, summary,    cmd, collection, depth, path) {
-  summary = substr(summary, index(summary, ":") + 1)
-  gsub("\\\\n",    " ",  summary) # one-liner
-  gsub("\\\\N",    " ",  summary) # one-liner
-  gsub("\\\\,",    ",",  summary)
-  gsub("\\\\;",    ";",  summary)
-  gsub("\\\\\\\\", "\\", summary)
+  summary = getcontent(summary)
+  gsub("\n", " ", summary) # This will be put on a single line
   depth = split(FILENAME, path, "/")
   fpath = path[depth-1] "/" path[depth]
   collection = depth > 1 ? path[depth-1] : ""

@@ -43,7 +43,7 @@ BEGIN {
   FS=":"
   zulu = strftime("%Y%m%dT%H%M%SZ", systime(), 1)
 }
-desc { desc = desc "\\n" $0; next }
+readdesc { desc = desc ? desc "\\n" escape($0) : escape($0); next }
 {
   from = substr($0, 1, 6) == "::: |>" ? substr($0, 8) : ""
   if (!from)
@@ -53,14 +53,15 @@ desc { desc = desc "\\n" $0; next }
   if (!to)
     exit 1
   getline
-  location = substr($0, 1, 2) == "@ " ? substr($0, 3) : ""
+  location = substr($0, 1, 2) == "@ " ? escape(substr($0, 3)) : ""
   if (location) getline
-  summary = substr($0, 1, 2) == "# " ? substr($0, 3) : ""
+  summary = substr($0, 1, 2) == "# " ? escape(substr($0, 3)) : ""
   if (!summary)
     exit 1
   getline # This line should be empty
-  getline # First line of description
-  desc = $0
+  if ($0 != "")
+    exit 1
+  readdesc = 1
   next
 }
 END {
@@ -113,9 +114,6 @@ END {
   if (suc != 1) {
     exit 1
   }
-  summary = escape(summary)
-  location = escape(location)
-  desc = escape(desc)
 
   # print ical
   print "BEGIN:VCALENDAR"

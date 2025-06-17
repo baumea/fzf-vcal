@@ -35,7 +35,6 @@ BEGIN                 { FS = "[:;]"; zulu = strftime("%Y%m%dT%H%M%SZ", systime()
 $1 == field && inside { con = 1; duplic = 1; print field ":" escape(value); next }
 $1 == field && duplic { con = 1; next }
 /^ / && con           { next }
-/^ / && con           { next }
 /^[^ ]/ && con        { con = 0 }
 /^SEQUENCE/ && inside { seq = $2; next } # store sequence number and skip
 /^LAST-MODIFIED/ && inside { next }

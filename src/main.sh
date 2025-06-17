@@ -705,18 +705,11 @@ __edit() {
   summary=$(awk -v field="SUMMARY" "$AWK_GET" "$fpath")
   description=$(awk -v field="DESCRIPTION" "$AWK_GET" "$fpath")
   filetmp=$(mktemp --suffix='.md')
-  (
-    echo "::: |> $start"
-    echo "::: <| $end"
-  ) >"$filetmp"
+  printf "::: |> %s\n::: <| %s\n" "$start" "$end" >"$filetmp"
   if [ -n "$location" ]; then
-    echo "@ $location" >>"$filetmp"
+    printf "@ %s\n" "$location" >>"$filetmp"
   fi
-  (
-    echo "# $summary"
-    echo ""
-    echo "$description"
-  ) >>"$filetmp"
+  printf "# %s\n\n%s\n" "$summary" "$description" >>"$filetmp"
   checksum=$(cksum "$filetmp")
   $EDITOR "$filetmp" >/dev/tty
 
