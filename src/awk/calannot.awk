@@ -3,22 +3,20 @@
 ##
 ## @assign cur: Day-of-month to mark as `today`
 ## @assign day: Day-of-month to highlight
+## @assign style_month: Theme to use for month
+## @assign style_weekdays: Theme to use for weekdays
+## @assign style_cur: Theme to use for current day 
+## @assign style_highlight: Theme to use for highlighted day
 
 BEGIN {
-  BLACK = "\033[1;30m"
-  GREEN = "\033[1;32m"
-  RED = "\033[1;31m"
-  FAINT = "\033[2m"
-  BOLD = "\033[1m"
-  BG = "\033[41m"
   OFF = "\033[m"
   day = day + 0
   cur = cur + 0
 }
-NR == 1 { print GREEN $0 OFF; next }
-NR == 2 { print FAINT $0 OFF; next }
+NR == 1 { print style_month $0 OFF; next }
+NR == 2 { print style_weekdays $0 OFF; next }
 { 
-  sub("\\y"cur"\\y", BG BLACK BOLD cur OFF)
-  sub("\\y"day"\\y", RED BOLD day OFF)
+  sub("\\y"cur"\\y", style_cur cur OFF)
+  sub("\\y"day"\\y", style_highlight day OFF)
   print
 }

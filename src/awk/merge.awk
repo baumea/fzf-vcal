@@ -4,14 +4,16 @@
 ## to the weeks at which the events take place.
 
 # AWK program
-BEGIN { FS="|" }
+BEGIN { FS="\t"; OFS="\t" }
 NR == FNR {
   i = i + 1
-  from_year[i] = $1
-  from_week[i] = $2
+  split($0, parts, ":")
+  from_year[i] = parts[1]
+  from_week[i] = parts[2]
   getline
-  to_year[i] = $1
-  to_week[i] = $2
+  split($0, parts, ":")
+  to_year[i] = parts[1]
+  to_week[i] = parts[2]
   next
 } # Load start and end week numbers from first file
 
@@ -21,8 +23,8 @@ NR == FNR {
   year_end = to_year[FNR]
   week_end = to_week[FNR]
   while(year_i <= year_end && (year_i < year_end || week_i <= week_end)) {
-    label = year_i"|"week_i
-    week[label] = week[label] " " $5
+    label = year_i ":" week_i ":"
+    week[label] = week[label] ? week[label] " " $5 : $5
     week_i++
     if (week_i > 53) {
       week_i = 1
@@ -30,4 +32,4 @@ NR == FNR {
     }
   }
 }
-END { for (label in week) print label week[label] }
+END { for (label in week) print label, week[label] }

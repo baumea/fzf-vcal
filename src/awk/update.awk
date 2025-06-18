@@ -1,42 +1,7 @@
 ## src/awk/update.awk
 ## Update iCalendar file from markdown file.
 
-# Functions
-
-# Escape string to be used as content in iCalendar files.
-#
-# @input str: String to escape
-# @return: Escaped string
-function escape(str)
-{
-  gsub("\\\\", "\\\\", str)
-  gsub(";",    "\\;",  str)
-  gsub(",",    "\\,",  str)
-  return str
-}
-
-# Print property with its content and fold according to the iCalendar
-# specification.
-#
-# @local variables: i, s
-# @input nameparam: Property name with optional parameters
-# @input content: Escaped content
-function print_fold(nameparam, content,    i, s)
-{
-  i = 74 - length(nameparam)
-  s = substr(content, 1, i)
-  print nameparam s
-  s = substr(content, i+1, 73)
-  i = i + 73
-  while (s)
-  {
-    print " " s
-    s = substr(content, i+1, 73)
-    i = i + 73
-  }
-}
-
-# AWK program
+@include "lib/awk/icalendar.awk"
 
 BEGIN { 
   FS=":"

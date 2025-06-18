@@ -6,21 +6,7 @@
 ##
 ## LIMITATION: This program does not fold long content lines.
 
-# Functions
-
-# Escape string to be used as content.
-#
-# @input str: Content string
-# @return: Escaped string
-function escape(str)
-{
-  gsub("\\\\", "\\\\", str)
-  gsub(";",    "\\;",  str)
-  gsub(",",    "\\,",  str)
-  return str
-}
-
-# AWK program
+@include "lib/awk/icalendar.awk"
 
 BEGIN                 { FS = "[:;]"; zulu = strftime("%Y%m%dT%H%M%SZ", systime(), 1) }
 /^BEGIN:VEVENT$/      { inside = 1 }
