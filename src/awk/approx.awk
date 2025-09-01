@@ -34,8 +34,8 @@ function fn(path,    n, a) {
 # @return: colorized single-line title string
 function title(start, summary) {
   summary = getcontent(summary)
-  gsub("\n",  " ", summary) # This will be put on a single line
-  gsub("\\t", " ", summary) # we use "\t" as delimiter
+  gsub("\n", " ",    summary) # This will be put on a single line
+  gsub("\t", "    ", summary) # we use "\t" as delimiter
   depth = split(FILENAME, path, "/")
   collection = depth > 1 ? path[depth-1] : ""
   collection = collection in collection2label ? collection2label[collection] : collection
@@ -57,8 +57,8 @@ BEGIN {
 }
 BEGINFILE             { inside = 0; rs = 0; dur = 0; summary = ""; start = "ERROR"; end = "ERROR" }
 /^END:VEVENT/         { print "~", start, dur ? start " " end : end, title(start, summary), fn(FILENAME); nextfile }
-/^DTSTART/ && inside  { start = parse() }
-/^DTEND/ && inside    { end = parse() }
+/^DTSTART/ && inside  { start = parse_dt(getparam($0), getcontent($0)) }
+/^DTEND/ && inside    { end = parse_dt(getparam($0), getcontent($0)) }
 /^DURATION/ && inside { end = parse_duration($NF); dur = 1 }
 /^[^ ]/ && rs         { rs = 0 }
 /^ / && rs            { summary = summary substr($0, 2) }

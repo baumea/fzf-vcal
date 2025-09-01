@@ -94,7 +94,7 @@ if [ "${1:-}" = "--preview-week" ]; then
       cal "$month_nex" "$year_nex" | awk "$AWK_CALSHIFT" | awk -v cur="${var_nex:-}" -v style_month="$STYLE_CALENDAR_MONTH" -v style_weekdays="$STYLE_CALENDAR_WEEKDAYS" -v style_cur="$STYLE_CALENDAR_CURRENT_DAY" -v style_highlight="$STYLE_CALENDAR_HL_DAY" "$AWK_CALANNOT"
       cal "$month_nex2" "$year_nex2" | awk "$AWK_CALSHIFT" | awk -v cur="${var_nex2:-}" -v style_month="$STYLE_CALENDAR_MONTH" -v style_weekdays="$STYLE_CALENDAR_WEEKDAYS" -v style_cur="$STYLE_CALENDAR_CURRENT_DAY" -v style_highlight="$STYLE_CALENDAR_HL_DAY" "$AWK_CALANNOT"
       cal "$month_nex3" "$year_nex3" | awk "$AWK_CALSHIFT" | awk -v cur="${var_nex3:-}" -v style_month="$STYLE_CALENDAR_MONTH" -v style_weekdays="$STYLE_CALENDAR_WEEKDAYS" -v style_cur="$STYLE_CALENDAR_CURRENT_DAY" -v style_highlight="$STYLE_CALENDAR_HL_DAY" "$AWK_CALANNOT"
-    ) | awk '{ l[NR%8] = l[NR%8] "    " $0 } END {for (i in l) if (i>0) print l[i] }'
+    ) | awk '{ l[(NR-1)%8] = l[(NR-1)%8] "    " $0 } END {for (i in l) print l[i] }'
   fi
   exit
 fi

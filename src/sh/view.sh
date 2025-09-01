@@ -84,13 +84,10 @@ __view_week() {
   startofweek=$(date -d "$DISPLAY_DATE -$delta days" +"%D")
   # loop over files
   sef=$({
-    set -- $files
-    for file in "$@"; do
-      file="$ROOT/$file"
+    printf "%s" "$files" | xargs -d " " -I {} -P0 \
       awk \
-        -v collection_labels="$COLLECTION_LABELS" \
-        "$AWK_PARSE" "$file"
-    done
+      -v collection_labels="$COLLECTION_LABELS" \
+      "$AWK_PARSE" "$ROOT/{}"
   })
   if [ -n "$sef" ]; then
     sef=$(echo "$sef" | while IFS= read -r line; do
@@ -106,11 +103,11 @@ __view_week() {
       status="$1"
       shift
       if [ "$status" = "TENTATIVE" ]; then
-        symb="$FAINT$CYAN"
+        symb="$STYLE_WV_TENTATIVE"
       elif [ "$status" = "CANCELLED" ]; then
-        symb="$STRIKE"
+        symb="$STYLE_WV_CANCELLED"
       else
-        symb=""
+        symb="$STYLE_WV_CONFIRMED"
       fi
       description="${symb:-}$*$OFF"
       for i in $(seq 0 7); do

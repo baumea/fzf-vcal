@@ -16,7 +16,11 @@ BEGIN {
 NR == 1 { print style_month $0 OFF; next }
 NR == 2 { print style_weekdays $0 OFF; next }
 { 
-  sub("\\y"cur"\\y", style_cur cur OFF)
-  sub("\\y"day"\\y", style_highlight day OFF)
+  if (day == cur) {
+    sub("\\y"cur"\\y", style_highlight style_cur cur OFF)
+  } else {
+    sub("\\y"cur"\\y", style_cur cur OFF)
+    sub("\\y"day"\\y", style_highlight day OFF)
+  }
   print
 }

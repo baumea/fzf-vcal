@@ -48,8 +48,8 @@ BEGIN {
   }
 }
 /^END:VEVENT/ && inside { print_data(start, dur, end, summary); exit }
-/^DTSTART/ && inside    { start = parse() }
-/^DTEND/ && inside      { end = parse() }
+/^DTSTART/ && inside    { start = parse_dt(getparam($0), getcontent($0)) }
+/^DTEND/ && inside      { end = parse_dt(getparam($0), getcontent($0)) }
 /^DURATION/ && inside   { end = parse_duration($NF); dur = 1 }
 /^STATUS/ && inside     { status = $NF }
 /^[^ ]/ && rs           { rs = 0 }

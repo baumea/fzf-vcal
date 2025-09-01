@@ -163,30 +163,34 @@ while true; do
           --accept-nth='1,2,3,4,5' \
           --preview="$0 --preview-event {}" \
           --expect="ctrl-n,ctrl-t,ctrl-g,ctrl-alt-d,esc,backspace,q,alt-v,x,c,a" \
-          --bind="load:pos(1)+transform(
-              echo change-border-label:🗓️ \$(date -d {1} +\"%A %e %B %Y\")
+          --bind='load:pos(1)+transform(
+              echo change-border-label:🗓️ $(date -d {1} +"%A %e %B %Y")
             )+transform(
-              [ -n \"\${TZ:-}\" ] && echo \"change-list-label:\$WHITE\$ITALIC(\$TZ)\$OFF\"
+              [ -n "${TZ:-}" ] && echo "change-list-label:$STYLE_DV_TZ($TZ)$OFF"
             )+transform(
-              [ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview
-            )" \
+              [ -n {5} ] && echo show-preview
+            )' \
           --bind="start:hide-preview" \
-          --bind="j:down+hide-preview+transform([ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview)" \
-          --bind="k:up+hide-preview+transform([ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview)" \
-          --bind="ctrl-j:down+hide-preview+transform([ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview)" \
-          --bind="ctrl-k:up+hide-preview+transform([ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview)" \
-          --bind="down:down+hide-preview+transform([ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview)" \
-          --bind="up:up+hide-preview+transform([ -n \"\$(echo {} | cut -f 5)\" ] && echo show-preview)" \
-          --bind="l:hide-preview+reload:$0 --reload-day {1} '+1 day'" \
-          --bind="h:hide-preview+reload:$0 --reload-day {1} '-1 day'" \
-          --bind="right:hide-preview+reload:$0 --reload-day {1} '+1 day'" \
-          --bind="left:hide-preview+reload:$0 --reload-day {1} '-1 day'" \
-          --bind="ctrl-l:hide-preview+reload:$0 --reload-day {1} '+1 week'" \
-          --bind="ctrl-h:hide-preview+reload:$0 --reload-day {1} '-1 week'" \
-          --bind="alt-l:hide-preview+reload:$0 --reload-day {1} '+1 month'" \
-          --bind="alt-h:hide-preview+reload:$0 --reload-day {1} '-1 month'" \
-          --bind="ctrl-r:hide-preview+reload:$0 --reload-day today" \
+          --bind="j:down" \
+          --bind="k:up" \
+          --bind="l:reload:$0 --reload-day {1} '+1 day'" \
+          --bind="h:reload:$0 --reload-day {1} '-1 day'" \
+          --bind="right:reload:$0 --reload-day {1} '+1 day'" \
+          --bind="left:reload:$0 --reload-day {1} '-1 day'" \
+          --bind="ctrl-l:reload:$0 --reload-day {1} '+1 week'" \
+          --bind="ctrl-h:reload:$0 --reload-day {1} '-1 week'" \
+          --bind="alt-l:reload:$0 --reload-day {1} '+1 month'" \
+          --bind="alt-h:reload:$0 --reload-day {1} '-1 month'" \
+          --bind="ctrl-r:reload:$0 --reload-day today" \
           --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
+          --bind='tab:down' \
+          --bind='shift-tab:up' \
+          --bind='focus:hide-preview+transform(
+            [ "$FZF_KEY" = "tab" ] && [ -z {5} ] && [ "$FZF_POS" -lt "$FZF_TOTAL_COUNT" ] && echo down
+            [ "$FZF_KEY" = "shift-tab" ] && [ -z {5} ] && [ "$FZF_POS" -gt "1" ] && echo up
+            )+transform(
+              [ -n {5} ] && echo show-preview
+            )' \
           --bind="w:toggle-preview-wrap" \
           --bind="ctrl-d:preview-down" \
           --bind="ctrl-u:preview-up"
@@ -239,7 +243,7 @@ while true; do
             --print-query \
             --bind="start:hide-input" \
             --bind="ctrl-alt-d:show-input+change-query(ctrl-alt-d)+accept" \
-            --bind="load:transform:[ \"\$FZF_TOTAL_COUNT\" -eq 0 ] && echo 'unbind(enter)+unbind(ctrl-alt-d)'" \
+            --bind='load:transform:[ "$FZF_TOTAL_COUNT" -eq 0 ] && echo "unbind(enter)+unbind(ctrl-alt-d)"' \
             --bind="w:toggle-wrap" \
             --bind="j:down" \
             --bind="k:up" ||
@@ -363,21 +367,21 @@ while true; do
           --info=right \
           --margin="1" \
           --info-command="printf \"$(date +"%R %Z")\"; [ -n \"\${TZ:-}\" ] && printf \" (\$TZ)\"" \
-          --preview-window=up,7,border-bottom \
+          --preview-window=up,8,border-bottom \
           --preview="$0 --preview-week {}" \
-          --bind="load:pos($DISPLAY_POS)" \
+          --bind="load:pos($DISPLAY_POS)+unbind(load)" \
           --expect="ctrl-n,ctrl-g,ctrl-t" \
           --bind="q:abort" \
           --bind="j:down" \
           --bind="k:up" \
-          --bind="l:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
-          --bind="h:unbind(load)+reload:$0 --reload-week {2} '-1 week'" \
-          --bind="right:unbind(load)+reload:$0 --reload-week {2} '+1 week'" \
-          --bind="left:unbind(load)+reload:$0 --reload-week {2} '-1 week'" \
-          --bind="ctrl-l:unbind(load)+reload:$0 --reload-week {2} '+1 month'" \
-          --bind="ctrl-h:unbind(load)+reload:$0 --reload-week {2} '-1 month'" \
-          --bind="alt-l:unbind(load)+reload:$0 --reload-week {2} '+1 year'" \
-          --bind="alt-h:unbind(load)+reload:$0 --reload-week {2} '-1 year'" \
+          --bind="l:reload:$0 --reload-week {2} '+1 week'" \
+          --bind="h:reload:$0 --reload-week {2} '-1 week'" \
+          --bind="right:reload:$0 --reload-week {2} '+1 week'" \
+          --bind="left:reload:$0 --reload-week {2} '-1 week'" \
+          --bind="ctrl-l:reload:$0 --reload-week {2} '+1 month'" \
+          --bind="ctrl-h:reload:$0 --reload-week {2} '-1 month'" \
+          --bind="alt-l:reload:$0 --reload-week {2} '+1 year'" \
+          --bind="alt-h:reload:$0 --reload-week {2} '-1 year'" \
           --bind="ctrl-r:rebind(load)+reload($0 --reload-week today)+show-preview" \
           --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
           --bind="/:show-input+unbind(q)+unbind(j)+unbind(k)+unbind(l)+unbind(h)+unbind(ctrl-l)+unbind(ctrl-h)+unbind(alt-l)+unbind(alt-h)+unbind(load)+hide-preview+reload:$0 --reload-all" \

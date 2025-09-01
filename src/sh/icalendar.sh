@@ -12,15 +12,12 @@
 # @input $1: Start date/date-time
 # @input $2: End date/date-time
 # @input $3: Path to iCalendar file (relative to `$ROOT`)
-# @req $AWK_GET:    Awk script to extract fields from iCalendar file
-# @req $AWK_UPDATE: Awk script to update iCalendar file
-# @req $EDITOR:     Environment variable of your favorite editor
 __edit() {
   start=$(__datetime_human_machine "$1")
   end=$(__datetime_human_machine "$2")
   fpath="$ROOT/$3"
-  location=$(awk -v field="LOCATION" "$AWK_GET" "$fpath")
-  summary=$(awk -v field="SUMMARY" "$AWK_GET" "$fpath")
+  location=$(awk -v field="LOCATION" "$AWK_GET" "$fpath" | tr -d "\n")
+  summary=$(awk -v field="SUMMARY" "$AWK_GET" "$fpath" | tr -d "\n")
   description=$(awk -v field="DESCRIPTION" "$AWK_GET" "$fpath")
   filetmp=$(mktemp --suffix='.md')
   printf "::: |> %s\n::: <| %s\n" "$start" "$end" >"$filetmp"
@@ -61,12 +58,6 @@ __edit() {
 # If the user specified a malformed date/date-time, we fail.
 #
 # @input $1 (optional): Date or datetime, defaults to today.
-# @req $COLLECTION_LABELS: Mapping between collections and lables (see configuration)
-# @req $UUIDGEN:           `uuidgen` command
-# @req $ROOT:              Path that contains the collections (see configuration)
-# @req $EDITOR:            Environment variable of your favorite editor
-# @req $AWK_GET:           Awk script to extract fields from iCalendar file
-# @req $AWK_new:           Awk script to generate iCalendar file
 __new() {
   collection=$(echo "$COLLECTION_LABELS" | tr ';' '\n' | awk '/./ {print}' | $FZF --margin="30%" --no-info --delimiter='=' --with-nth=2 --accept-nth=1)
   fpath=""
@@ -119,8 +110,6 @@ __new() {
 # Delete iCalendar file
 #
 # @input $1: Path to iCalendar file, relative to `$ROOT`
-# @req $ROOT: Path that contains the collections (see configuration)
-# @req $AWK_GET: Awk script to extract fields from iCalendar file
 __delete() {
   fpath="$ROOT/$1"
   summary=$(awk -v field="SUMMARY" "$AWK_GET" "$fpath")
@@ -152,9 +141,6 @@ __delete() {
 #
 # @input $1: path to iCalendar file
 # @input $2: collection name
-# @req $ROOT: Path that contains the collections (see configuration)
-# @req $UUIDGEN: `uuidgen` command
-# @req $AWK_SET: Awk script to set field value
 __import_to_collection() {
   file="$1"
   collection="$2"
@@ -175,9 +161,6 @@ __import_to_collection() {
 # Set status of appointment to CANCELLED or CONFIRMED (toggle)
 #
 # @input $1: path to iCalendar file
-# @req $ROOT: Path that contains the collections (see configuration)
-# @req $AWK_SET: Awk script to set field value
-# @req $AWK_GET: Awk script to extract fields from iCalendar file
 __cancel_toggle() {
   fpath="$ROOT/$1"
   status=$(awk -v field="STATUS" "$AWK_GET" "$fpath")
@@ -197,9 +180,6 @@ __cancel_toggle() {
 # Toggle status flag: CONFIRMED <-> TENTATIVE
 #
 # @input $1: path to iCalendar file
-# @req $ROOT: Path that contains the collections (see configuration)
-# @req $AWK_SET: Awk script to set field value
-# @req $AWK_GET: Awk script to extract fields from iCalendar file
 __tentative_toggle() {
   fpath="$ROOT/$1"
   status=$(awk -v field="STATUS" "$AWK_GET" "$fpath")
@@ -219,9 +199,6 @@ __tentative_toggle() {
 # Prepend attachment to iCalendar file
 #
 # @input $1: path to iCalendar file
-# @req $ROOT: Path that contains the collections (see configuration)
-# @req $FZF: Fuzzy finder
-# @req $AWK_ATTACH: Awk script to add attachment
 __add_attachment() {
   fpath="$ROOT/$1"
   sel=$(

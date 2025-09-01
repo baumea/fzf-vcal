@@ -5,6 +5,7 @@
 function escape(str)
 {
   gsub("\\\\", "\\\\", str)
+  gsub("\\n",  "\\n",  str)
   gsub(";",    "\\;",  str)
   gsub(",",    "\\,",  str)
   return str
@@ -37,7 +38,7 @@ function print_fold(nameparam, content,    i, s)
 # @input str: String
 # @return: Unescaped string
 function unescape(str,    i, c, c2, res) {
-  for(i=1; i<=length(str);i++) {
+  for(i = 1; i <= length(str); i++) {
     c = substr(str, i, 1)
     if (c != "\\") {
       res = res c
@@ -57,6 +58,17 @@ function unescape(str,    i, c, c2, res) {
   return res
 }
 
+# Isolate parameter part of an iCalendar line.
+#
+# @input str: String
+# @return: Parameter part
+function getparam(str,    i) {
+  i = index(str, ";")
+  if (!i)
+    return ""
+  return substr(str, i + 1, index(str, ":") - i)
+}
+
 # Isolate content part of an iCalendar line, and unescape.
 #
 # @input str: String
@@ -65,22 +77,27 @@ function getcontent(str) {
   return unescape(substr(str, index(str, ":") + 1))
 }
 
-# Time-zone aware parsing of the date/date-time entry at the current record.
+# Time-zone aware parsing of DTSTART or DTEND entries.
 #
-# @local variables: dt
+# @local variables: tz
+# @input dt_param: iCalendar DTSTART or DTEND parameter string
+# @input dt_content: iCalendar DTSTART or DTEND content string
 # @return: date or date-time string that can be used in date (1)
-function parse(    dt) {
-  # Get timezone information
-  for (i=2; i<NF-1; i+=2) {
-    if ($i == "TZID") {
-      dt = "TZ=\"" $(i+1) "\" "
-      break
+function parse_dt(dt_param, dt_content,    tz, a, i, k) {
+  if (dt_param) {
+    split(dt_param, a, ";")
+    for (i in a) {
+      k = index(a[i], "=")
+      if (substr(a[i], 1, k-1) == "TZID") {
+        tz = "TZ=\"" substr(a[i], k + 1) "\" "
+        break
+      }
     }
   }
   # Get date/date-time
-  return length($NF) == 8 ?
-    dt $NF :
-    dt gensub(/^([0-9]{8})T([0-9]{2})([0-9]{2})([0-9]{2})(Z)?$/, "\\1 \\2:\\3:\\4\\5", "g", $NF)
+  return length(dt_content) == 8 ?
+    dt dt_content :
+    dt gensub(/^([0-9]{8})T([0-9]{2})([0-9]{2})([0-9]{2})(Z)?$/, "\\1 \\2:\\3:\\4\\5", "g", dt_content)
 }
 
 # Map iCalendar duration specification into the format to be used in date (1).
