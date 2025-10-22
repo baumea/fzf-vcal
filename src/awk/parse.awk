@@ -47,6 +47,7 @@ BEGIN {
     collection2label[m[1]] = m[2]
   }
 }
+                        { gsub("\r", "") }
 /^END:VEVENT/ && inside { print_data(start, dur, end, summary); exit }
 /^DTSTART/ && inside    { start = parse_dt(getparam($0), getcontent($0)) }
 /^DTEND/ && inside      { end = parse_dt(getparam($0), getcontent($0)) }

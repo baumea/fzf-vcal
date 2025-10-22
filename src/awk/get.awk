@@ -6,6 +6,7 @@
 @include "lib/awk/icalendar.awk"
 
 BEGIN              { FS = ":"; regex = "^" field }
+                   { gsub("\r", "") }
 /^BEGIN:VEVENT$/   { inside = 1 }
 /^END:VEVENT$/     { exit }
 $0 ~ regex         { content = $0; next }

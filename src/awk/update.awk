@@ -81,7 +81,7 @@ NR == FNR {
   readdesc = 1
   next
 }
-
+{ gsub("\r", "") }
 /^END:VEVENT$/ {
   seq = seq ? seq + 1 : 1
   print "SEQUENCE:" seq
