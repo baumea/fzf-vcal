@@ -182,7 +182,7 @@ while true; do
           --bind="alt-l:reload:$0 --reload-day {1} '+1 month'" \
           --bind="alt-h:reload:$0 --reload-day {1} '-1 month'" \
           --bind="ctrl-r:reload:$0 --reload-day today" \
-          --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
+          --bind="ctrl-s:execute($SYNC_CMD; [ -n \"${GIT:-}\" ] && ${GIT:-echo} add -A && ${GIT:-echo} commit -am 'Synchronized'; printf 'Press <enter> to continue.'; read -r tmp)" \
           --bind='tab:down' \
           --bind='shift-tab:up' \
           --bind='focus:hide-preview+transform(
@@ -383,7 +383,7 @@ while true; do
           --bind="alt-l:reload:$0 --reload-week {2} '+1 year'" \
           --bind="alt-h:reload:$0 --reload-week {2} '-1 year'" \
           --bind="ctrl-r:rebind(load)+reload($0 --reload-week today)+show-preview" \
-          --bind="ctrl-s:execute($SYNC_CMD ; printf 'Press <enter> to continue.'; read -r tmp)" \
+          --bind="ctrl-s:execute($SYNC_CMD; [ -n \"${GIT:-}\" ] && ${GIT:-echo} add -A && ${GIT:-echo} commit -am 'Synchronized'; printf 'Press <enter> to continue.'; read -r tmp)" \
           --bind="/:show-input+unbind(q)+unbind(j)+unbind(k)+unbind(l)+unbind(h)+unbind(ctrl-l)+unbind(ctrl-h)+unbind(alt-l)+unbind(alt-h)+unbind(load)+hide-preview+reload:$0 --reload-all" \
           --bind="backward-eof:hide-input+rebind(q)+rebind(j)+rebind(k)+rebind(l)+rebind(h)+rebind(ctrl-l)+rebind(ctrl-h)+rebind(alt-l)+rebind(alt-h)+rebind(load)+show-preview+reload:$0 --reload-week today" \
           --bind="esc:clear-query+hide-input+rebind(q)+rebind(j)+rebind(k)+rebind(l)+rebind(h)+rebind(ctrl-l)+rebind(ctrl-h)+rebind(alt-l)+rebind(alt-h)+rebind(load)+show-preview+reload:$0 --reload-week today"
