@@ -77,7 +77,9 @@ function slice(start, stop, collection, desc, status) {
   color = color_from_status(status)
   if (stop == "00:00")
     return collection " " style_timerange start " →      " ": " OFF color desc OFF
-   else
+  else if (start == stop)
+    return collection " " style_timerange start "        " ": " OFF color desc OFF
+  else
     return collection " " style_timerange start " – " stop ": " OFF color desc OFF
 }
 

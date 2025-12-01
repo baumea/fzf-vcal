@@ -84,10 +84,10 @@ NR == FNR {
 { gsub("\r", "") }
 /^END:VEVENT$/ {
   seq = seq ? seq + 1 : 1
-  print "SEQUENCE:" seq
-  print "LAST-MODIFIED:" zulu
-  print "DTSTART;VALUE=" from_type ":" from
-  print "DTEND;VALUE=" to_type ":" to
+  print_cr("SEQUENCE:" seq)
+  print_cr("LAST-MODIFIED:" zulu)
+  print_cr("DTSTART;VALUE=" from_type ":" from)
+  print_cr("DTEND;VALUE=" to_type ":" to)
   print_fold("SUMMARY:",     summary)
   print_fold("DESCRIPTION:", desc)
   print_fold("LOCATION:",    location)
@@ -100,4 +100,4 @@ NR == FNR {
 /^(DTSTART|DTEND|SUMMARY|LOCATION|CATEGORIES|DESCRIPTION|LAST-MODIFIED)/ && inside { skipf = 1; next } # skip for now, we will write updated fields at the end
 /^X-ALT-DESC/ && inside    { skipf = 1; next } # skip
 /^SEQUENCE/ && inside      { seq = $2; next } # store sequence number and skip
-{ print }
+{ print_cr($0) }

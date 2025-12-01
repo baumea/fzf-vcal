@@ -83,23 +83,23 @@ END {
   }
 
   # print ical
-  print "BEGIN:VCALENDAR"
-  print "VERSION:2.0"
-  print "CALSCALE:GREGORIAN"
-  print "PRODID:-//fab//awk//EN"
-  print "BEGIN:VEVENT"
-  print "DTSTAMP:" zulu
-  print "UID:" uid
-  print "CLASS:PRIVATE"
-  print "CREATED:" zulu
-  print "SEQUENCE:1"
-  print "LAST-MODIFIED:" zulu
-  print "STATUS:CONFIRMED"
-  print "DTSTART;VALUE=" from_type ":" from
-  print "DTEND;VALUE=" to_type ":" to
+  print_cr("BEGIN:VCALENDAR")
+  print_cr("VERSION:2.0")
+  print_cr("CALSCALE:GREGORIAN")
+  print_cr("PRODID:-//fab//awk//EN")
+  print_cr("BEGIN:VEVENT")
+  print_cr("DTSTAMP:" zulu)
+  print_cr("UID:" uid)
+  print_cr("CLASS:PRIVATE")
+  print_cr("CREATED:" zulu)
+  print_cr("SEQUENCE:1")
+  print_cr("LAST-MODIFIED:" zulu)
+  print_cr("STATUS:CONFIRMED")
+  print_cr("DTSTART;VALUE=" from_type ":" from)
+  print_cr("DTEND;VALUE=" to_type ":" to)
   if (summary)    print_fold("SUMMARY:",     summary)
   if (desc)       print_fold("DESCRIPTION:", desc)
   if (location)   print_fold("LOCATION:",    location)
-  print "END:VEVENT"
-  print "END:VCALENDAR"
+  print_cr("END:VEVENT")
+  print_cr("END:VCALENDAR")
 }

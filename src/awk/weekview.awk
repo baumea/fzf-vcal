@@ -29,6 +29,7 @@ BEGIN {
 $2 == "00:00" && $3 == "00:00" { dayline = dayline " " c($4); next }
 $2 == "00:00"                  { dayline = dayline style_time " → " $3 OFF " " c($4); next }
 $3 == "00:00"                  { dayline = dayline style_time " " $2 " → " OFF c($4); next }
+NF == 4 && $2 == $3            { dayline = dayline style_time " " $2 OFF " " c($4); next }
 NF == 4                        { dayline = dayline style_time " " $2 " – " $3 OFF " " c($4); next }
 NF == 1 && dayline             { print "+", startofweek " +" $1-1 " days", "", dayline }
 NF == 1 {

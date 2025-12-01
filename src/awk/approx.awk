@@ -55,9 +55,9 @@ BEGIN {
   # Colors
   OFF = "\033[m"
 }
-BEGINFILE             { inside = 0; rs = 0; dur = 0; summary = ""; start = "ERROR"; end = "ERROR" }
+BEGINFILE             { inside = 0; rs = 0; dur = 0; summary = ""; start = "ERROR"; end = "" }
                       { gsub("\r", "") }
-/^END:VEVENT/         { print "~", start, dur ? start " " end : end, title(start, summary), fn(FILENAME); nextfile }
+/^END:VEVENT/         { print "~", start, dur ? start " " end : (end ? end : start), title(start, summary), fn(FILENAME); nextfile }
 /^DTSTART/ && inside  { start = parse_dt(getparam($0), getcontent($0)) }
 /^DTEND/ && inside    { end = parse_dt(getparam($0), getcontent($0)) }
 /^DURATION/ && inside { end = parse_duration($NF); dur = 1 }

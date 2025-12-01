@@ -9,19 +9,20 @@
 @include "lib/awk/icalendar.awk"
 
 BEGIN                 { FS = "[:;]"; zulu = strftime("%Y%m%dT%H%M%SZ", systime(), 1) }
+                      { gsub("\r", "") }
 /^BEGIN:VEVENT$/      { inside = 1 }
 /^END:VEVENT$/        {
   inside = 0
   if (!duplic)
-    print field ":" escape(value)
+    print_fold(field":", escape(value))
   seq = seq ? seq + 1 : 1
-  print "SEQUENCE:" seq
-  print "LAST-MODIFIED:" zulu
+  print_cr("SEQUENCE:" seq)
+  print_cr("LAST-MODIFIED:" zulu)
 }
-$1 == field && inside { con = 1; duplic = 1; print field ":" escape(value); next }
+$1 == field && inside { con = 1; duplic = 1; print_fold(field":", escape(value)); next }
 $1 == field && duplic { con = 1; next }
 /^ / && con           { next }
 /^[^ ]/ && con        { con = 0 }
 /^SEQUENCE/ && inside { seq = $2; next } # store sequence number and skip
 /^LAST-MODIFIED/ && inside { next }
-{ print }
+{ print_cr($0) }

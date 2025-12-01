@@ -11,6 +11,14 @@ function escape(str)
   return str
 }
 
+# Print line using \r\n ending, as required by the RFC
+#
+# @input str: String
+function print_cr(str)
+{
+  print str "\r"
+}
+
 # Print property with its content and fold according to the iCalendar
 # specification.
 #
@@ -19,16 +27,16 @@ function escape(str)
 # @input content: Escaped content
 function print_fold(nameparam, content,    i, s)
 {
-  i = 74 - length(nameparam)
+  i = 73 - length(nameparam)
   s = substr(content, 1, i)
-  print nameparam s
-  s = substr(content, i+1, 73)
-  i = i + 73
+  print_cr(nameparam s)
+  s = substr(content, i+1, 72)
+  i = i + 72
   while (s)
   {
-    print " " s
-    s = substr(content, i+1, 73)
-    i = i + 73
+    print_cr(" " s)
+    s = substr(content, i+1, 72)
+    i = i + 72
   }
 }
 

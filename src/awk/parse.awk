@@ -30,9 +30,13 @@ function print_data(start, dur, end, summary,    cmd, collection, depth, path) {
   cmd = "date -d '" start "' +\"%s\""
   cmd | getline start
   close(cmd)
-  cmd = "date -d '" end "' +\"%s\""
-  cmd | getline end
-  close(cmd)
+  if (end) {
+    cmd = "date -d '" end "' +\"%s\""
+    cmd | getline end
+    close(cmd)
+  } else {
+    end = start
+  }
   status = status ? status : "CONFIRMED"
   print start, end, fpath, collection, status, summary
 }
